@@ -193,9 +193,18 @@
             align-items: center;
             overflow-y: auto;
             overflow-x: auto;
-            padding: 32px 24px 48px;
+            padding: 32px 0 48px;
             gap: 24px;
             touch-action: pan-x pan-y;
+        }
+
+        #main-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            padding: 0 200px; /* 좌우 여백 → 왼쪽도 패닝 가능 */
+            min-width: max-content;
         }
 
         /* 캔버스 */
@@ -367,6 +376,7 @@
 <div id="zoom-indicator">100%</div>
 
 <div id="main">
+  <div id="main-inner">
     <div id="canvas-wrapper">
         <canvas id="noteCanvas" width="842" height="1100"></canvas>
     </div>
@@ -375,6 +385,7 @@
         <div class="result-label">AI 인식 결과</div>
         <div id="ai-text" class="placeholder">위 버튼을 눌러 AI가 노트를 읽게 하세요.</div>
     </div>
+  </div>
 </div>
 
 <script>
@@ -467,9 +478,15 @@
         drawBackground();
         render();
 
+        // 초기 스크롤 위치를 중앙으로 (왼쪽 패닝 공간 확보)
+        setTimeout(() => {
+            mainEl.scrollLeft = 200;
+        }, 50);
+
         // S펜만 드로잉 (pointerType === 'pen' 또는 'mouse')
         canvas.addEventListener('pointerdown', e => {
             if (e.pointerType === 'touch') return;
+            e.preventDefault();
             startDraw(e);
         });
         canvas.addEventListener('pointermove', e => {
@@ -487,6 +504,7 @@
         canvas.addEventListener('contextmenu', e => e.preventDefault());
 
         // 터치: 1손가락=패닝, 2손가락=핀치줌
+        // passive:true → S펜 pointer 이벤트와 충돌 없음
         canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
         canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
         canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -500,17 +518,19 @@
     }
 
     function handleTouchStart(e) {
+        // S펜이 만드는 touch 이벤트 차단 (포인터 타입이 pen이면 무시)
+        // touches가 0개면 S펜 전용이므로 리턴
+        if (e.touches.length === 0) return;
+
         Array.from(e.changedTouches).forEach(t => activeTouches.set(t.identifier, t));
 
         if (activeTouches.size === 1) {
-            // 1손가락 → 패닝 시작
             isPanning = true;
             isPinching = false;
             const t = e.touches[0];
             panLastX = t.clientX;
             panLastY = t.clientY;
         } else if (activeTouches.size === 2) {
-            // 2손가락 → 핀치줌 시작
             isPanning = false;
             isPinching = true;
             const touches = Array.from(activeTouches.values());
@@ -520,25 +540,27 @@
     }
 
     function handleTouchMove(e) {
+        if (e.touches.length === 0) return;
         Array.from(e.changedTouches).forEach(t => activeTouches.set(t.identifier, t));
 
         if (isPanning && activeTouches.size === 1) {
-            // 1손가락 패닝 → main 영역 스크롤
             const t = e.touches[0];
             const dx = panLastX - t.clientX;
             const dy = panLastY - t.clientY;
-            mainEl.scrollLeft += dx;
-            mainEl.scrollTop += dy;
+
+            // scrollLeft가 음수 안 되게 — wrapper 여백 포함 계산
+            mainEl.scrollLeft = Math.max(0, mainEl.scrollLeft + dx);
+            mainEl.scrollTop = Math.max(0, mainEl.scrollTop + dy);
+
             panLastX = t.clientX;
             panLastY = t.clientY;
 
         } else if (isPinching && activeTouches.size === 2) {
-            // 2손가락 핀치줌
             e.preventDefault();
             const touches = Array.from(activeTouches.values());
             const dist = getTouchDist(touches[0], touches[1]);
             const newScale = pinchStartScale * (dist / pinchStartDist);
-            smoothZoomTo(newScale); // 부드러운 줌
+            smoothZoomTo(newScale);
         }
     }
 
