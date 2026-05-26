@@ -209,7 +209,7 @@
             display: block;
             background: #ffffff;
             cursor: crosshair;
-            touch-action: none;
+            touch-action: pan-x pan-y;
             border-radius: 2px;
         }
         canvas.eraser-mode { cursor: cell; }
@@ -389,13 +389,24 @@
     let currentColor = '#1a1a1a';
     let currentTemplate = 'blank';
 
-    // 핀치줌 상태
+    // ── 줌/패닝 상태 ──
     let currentScale = 1.0;
     const MIN_SCALE = 0.3, MAX_SCALE = 4.0;
+    let targetScale = 1.0; // 부드러운 줌용
+    let animFrame = null;
+
+    // 패닝 상태
+    let isPanning = false;
+    let panLastX = 0, panLastY = 0;
+
+    // 핀치 상태
+    let isPinching = false;
     let pinchStartDist = 0;
     let pinchStartScale = 1.0;
     let activeTouches = new Map();
+
     const wrapper = document.getElementById('canvas-wrapper');
+    const mainEl = document.getElementById('main');
     const zoomIndicator = document.getElementById('zoom-indicator');
     let zoomTimeout = null;
 
@@ -407,12 +418,30 @@
     }
 
     function applyScale() {
-        // transform 대신 CSS width/height 변경 → 레이아웃 흐름 유지
         const w = Math.round(842 * currentScale);
         const h = Math.round(1100 * currentScale);
         canvas.style.width = w + 'px';
         canvas.style.height = h + 'px';
         showZoom();
+    }
+
+    // 부드러운 줌 애니메이션
+    function smoothZoomTo(target) {
+        targetScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, target));
+        if (animFrame) return;
+        function step() {
+            const diff = targetScale - currentScale;
+            if (Math.abs(diff) < 0.002) {
+                currentScale = targetScale;
+                applyScale();
+                animFrame = null;
+                return;
+            }
+            currentScale += diff * 0.18; // 이징 속도
+            applyScale();
+            animFrame = requestAnimationFrame(step);
+        }
+        animFrame = requestAnimationFrame(step);
     }
 
     // 배경 레이어 (별도 캔버스로 분리 — 핵심 버그 수정)
@@ -438,9 +467,9 @@
         drawBackground();
         render();
 
-        // S펜만 드로잉, 손가락은 스크롤/줌
+        // S펜만 드로잉 (pointerType === 'pen' 또는 'mouse')
         canvas.addEventListener('pointerdown', e => {
-            if (e.pointerType === 'touch') return; // 손가락 터치 무시
+            if (e.pointerType === 'touch') return;
             startDraw(e);
         });
         canvas.addEventListener('pointermove', e => {
@@ -457,10 +486,11 @@
         });
         canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-        // 핀치줌 (touch events)
-        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        // 터치: 1손가락=패닝, 2손가락=핀치줌
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
         canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
+        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: true });
     };
 
     function getTouchDist(t1, t2) {
@@ -469,40 +499,62 @@
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    let isPinching = false;
-
     function handleTouchStart(e) {
         Array.from(e.changedTouches).forEach(t => activeTouches.set(t.identifier, t));
-        if (activeTouches.size === 2) {
+
+        if (activeTouches.size === 1) {
+            // 1손가락 → 패닝 시작
+            isPanning = true;
+            isPinching = false;
+            const t = e.touches[0];
+            panLastX = t.clientX;
+            panLastY = t.clientY;
+        } else if (activeTouches.size === 2) {
+            // 2손가락 → 핀치줌 시작
+            isPanning = false;
+            isPinching = true;
             const touches = Array.from(activeTouches.values());
             pinchStartDist = getTouchDist(touches[0], touches[1]);
             pinchStartScale = currentScale;
-            isPinching = false; // 아직 핀치인지 모름
         }
     }
 
     function handleTouchMove(e) {
         Array.from(e.changedTouches).forEach(t => activeTouches.set(t.identifier, t));
-        if (activeTouches.size === 2) {
+
+        if (isPanning && activeTouches.size === 1) {
+            // 1손가락 패닝 → main 영역 스크롤
+            const t = e.touches[0];
+            const dx = panLastX - t.clientX;
+            const dy = panLastY - t.clientY;
+            mainEl.scrollLeft += dx;
+            mainEl.scrollTop += dy;
+            panLastX = t.clientX;
+            panLastY = t.clientY;
+
+        } else if (isPinching && activeTouches.size === 2) {
+            // 2손가락 핀치줌
+            e.preventDefault();
             const touches = Array.from(activeTouches.values());
             const dist = getTouchDist(touches[0], touches[1]);
-            const distDelta = Math.abs(dist - pinchStartDist);
-
-            // 손가락 간격이 20px 이상 변해야 핀치줌으로 인식
-            if (!isPinching && distDelta < 20) return;
-            isPinching = true;
-
-            e.preventDefault();
-            let newScale = pinchStartScale * (dist / pinchStartDist);
-            newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
-            currentScale = newScale;
-            applyScale();
+            const newScale = pinchStartScale * (dist / pinchStartDist);
+            smoothZoomTo(newScale); // 부드러운 줌
         }
     }
 
     function handleTouchEnd(e) {
         Array.from(e.changedTouches).forEach(t => activeTouches.delete(t.identifier));
-        if (activeTouches.size < 2) isPinching = false;
+        if (activeTouches.size === 0) {
+            isPanning = false;
+            isPinching = false;
+        } else if (activeTouches.size === 1) {
+            // 핀치 → 1손가락으로 전환되면 패닝으로
+            isPinching = false;
+            isPanning = true;
+            const t = Array.from(activeTouches.values())[0];
+            panLastX = t.clientX;
+            panLastY = t.clientY;
+        }
     }
 
     function buildPalette() {
