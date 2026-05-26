@@ -188,13 +188,8 @@
         /* ── 메인 영역 ── */
         #main {
             flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             overflow-y: auto;
             overflow-x: auto;
-            padding: 32px 0 48px;
-            gap: 24px;
             touch-action: pan-x pan-y;
         }
 
@@ -203,7 +198,7 @@
             flex-direction: column;
             align-items: center;
             gap: 24px;
-            padding: 0 200px; /* 좌우 여백 → 왼쪽도 패닝 가능 */
+            padding: 32px 400px 48px;
             min-width: max-content;
         }
 
@@ -218,7 +213,7 @@
             display: block;
             background: #ffffff;
             cursor: crosshair;
-            touch-action: pan-x pan-y;
+            touch-action: none;
             border-radius: 2px;
         }
         canvas.eraser-mode { cursor: cell; }
@@ -403,20 +398,26 @@
     // ── 줌/패닝 상태 ──
     let currentScale = 1.0;
     const MIN_SCALE = 0.3, MAX_SCALE = 4.0;
-    let targetScale = 1.0; // 부드러운 줌용
+    let targetScale = 1.0;
     let animFrame = null;
 
-    // 패닝 상태
+    // 드로잉 상태
+    let isPenDrawing = false;
+
+    // 패닝 상태 (손가락 1개)
     let isPanning = false;
     let panLastX = 0, panLastY = 0;
+    let panPointerId = null;
 
-    // 핀치 상태
-    let isPinching = false;
+    // 핀치 상태 (손가락 2개) - pointer 이벤트로 관리
+    let touchPointers = new Map(); // pointerId → {x, y}
     let pinchStartDist = 0;
     let pinchStartScale = 1.0;
-    let activeTouches = new Map();
+    let pinchStartScrollX = 0;
+    let pinchStartScrollY = 0;
+    let pinchStartMidX = 0;
+    let pinchStartMidY = 0;
 
-    const wrapper = document.getElementById('canvas-wrapper');
     const mainEl = document.getElementById('main');
     const zoomIndicator = document.getElementById('zoom-indicator');
     let zoomTimeout = null;
@@ -436,7 +437,7 @@
         showZoom();
     }
 
-    // 부드러운 줌 애니메이션
+    // 부드러운 줌 (이징)
     function smoothZoomTo(target) {
         targetScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, target));
         if (animFrame) return;
@@ -448,11 +449,17 @@
                 animFrame = null;
                 return;
             }
-            currentScale += diff * 0.18; // 이징 속도
+            currentScale += diff * 0.22;
             applyScale();
             animFrame = requestAnimationFrame(step);
         }
         animFrame = requestAnimationFrame(step);
+    }
+
+    function getPointerDist(p1, p2) {
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     // 배경 레이어 (별도 캔버스로 분리 — 핵심 버그 수정)
@@ -478,104 +485,122 @@
         drawBackground();
         render();
 
-        // 초기 스크롤 위치를 중앙으로 (왼쪽 패닝 공간 확보)
-        setTimeout(() => {
-            mainEl.scrollLeft = 200;
-        }, 50);
+        // 초기 스크롤 중앙 (좌우 400px 패딩 기준)
+        setTimeout(() => { mainEl.scrollLeft = 400; }, 50);
 
-        // S펜만 드로잉 (pointerType === 'pen' 또는 'mouse')
-        canvas.addEventListener('pointerdown', e => {
-            if (e.pointerType === 'touch') return;
-            e.preventDefault();
-            startDraw(e);
-        });
-        canvas.addEventListener('pointermove', e => {
-            if (e.pointerType === 'touch') return;
-            draw(e);
-        });
-        canvas.addEventListener('pointerup', e => {
-            if (e.pointerType === 'touch') return;
-            stopDraw(e);
-        });
-        canvas.addEventListener('pointerleave', e => {
-            if (e.pointerType === 'touch') return;
-            stopDraw(e);
-        });
         canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-        // 터치: 1손가락=패닝, 2손가락=핀치줌
-        // passive:true → S펜 pointer 이벤트와 충돌 없음
-        canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
-        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-        canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
-        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+        // ── Pointer 단일 체계 ──
+        canvas.addEventListener('pointerdown', onPointerDown);
+        canvas.addEventListener('pointermove', onPointerMove);
+        canvas.addEventListener('pointerup', onPointerUp);
+        canvas.addEventListener('pointercancel', onPointerUp);
+        canvas.addEventListener('pointerleave', onPointerLeave);
     };
 
-    function getTouchDist(t1, t2) {
-        const dx = t1.clientX - t2.clientX;
-        const dy = t1.clientY - t2.clientY;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
+    // ── Pointer Down ──
+    function onPointerDown(e) {
+        canvas.setPointerCapture(e.pointerId);
 
-    function handleTouchStart(e) {
-        // S펜이 만드는 touch 이벤트 차단 (포인터 타입이 pen이면 무시)
-        // touches가 0개면 S펜 전용이므로 리턴
-        if (e.touches.length === 0) return;
-
-        Array.from(e.changedTouches).forEach(t => activeTouches.set(t.identifier, t));
-
-        if (activeTouches.size === 1) {
-            isPanning = true;
-            isPinching = false;
-            const t = e.touches[0];
-            panLastX = t.clientX;
-            panLastY = t.clientY;
-        } else if (activeTouches.size === 2) {
-            isPanning = false;
-            isPinching = true;
-            const touches = Array.from(activeTouches.values());
-            pinchStartDist = getTouchDist(touches[0], touches[1]);
-            pinchStartScale = currentScale;
-        }
-    }
-
-    function handleTouchMove(e) {
-        if (e.touches.length === 0) return;
-        Array.from(e.changedTouches).forEach(t => activeTouches.set(t.identifier, t));
-
-        if (isPanning && activeTouches.size === 1) {
-            const t = e.touches[0];
-            const dx = panLastX - t.clientX;
-            const dy = panLastY - t.clientY;
-
-            // scrollLeft가 음수 안 되게 — wrapper 여백 포함 계산
-            mainEl.scrollLeft = Math.max(0, mainEl.scrollLeft + dx);
-            mainEl.scrollTop = Math.max(0, mainEl.scrollTop + dy);
-
-            panLastX = t.clientX;
-            panLastY = t.clientY;
-
-        } else if (isPinching && activeTouches.size === 2) {
+        if (e.pointerType === 'pen' || e.pointerType === 'mouse') {
+            // S펜 / 마우스 → 드로잉
+            isPenDrawing = true;
             e.preventDefault();
-            const touches = Array.from(activeTouches.values());
-            const dist = getTouchDist(touches[0], touches[1]);
-            const newScale = pinchStartScale * (dist / pinchStartDist);
-            smoothZoomTo(newScale);
+            startDraw(e);
+
+        } else if (e.pointerType === 'touch') {
+            touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (touchPointers.size === 1) {
+                // 1손가락 → 패닝 준비
+                isPanning = true;
+                panLastX = e.clientX;
+                panLastY = e.clientY;
+                panPointerId = e.pointerId;
+
+            } else if (touchPointers.size === 2) {
+                // 2손가락 → 핀치줌 시작
+                isPanning = false;
+                const pts = Array.from(touchPointers.values());
+                pinchStartDist = getPointerDist(pts[0], pts[1]);
+                pinchStartScale = currentScale;
+                // 중심점 기준 스크롤 보정용
+                pinchStartMidX = (pts[0].x + pts[1].x) / 2;
+                pinchStartMidY = (pts[0].y + pts[1].y) / 2;
+                pinchStartScrollX = mainEl.scrollLeft;
+                pinchStartScrollY = mainEl.scrollTop;
+            }
         }
     }
 
-    function handleTouchEnd(e) {
-        Array.from(e.changedTouches).forEach(t => activeTouches.delete(t.identifier));
-        if (activeTouches.size === 0) {
-            isPanning = false;
-            isPinching = false;
-        } else if (activeTouches.size === 1) {
-            // 핀치 → 1손가락으로 전환되면 패닝으로
-            isPinching = false;
-            isPanning = true;
-            const t = Array.from(activeTouches.values())[0];
-            panLastX = t.clientX;
-            panLastY = t.clientY;
+    // ── Pointer Move ──
+    function onPointerMove(e) {
+        if (e.pointerType === 'pen' || e.pointerType === 'mouse') {
+            draw(e);
+
+        } else if (e.pointerType === 'touch') {
+            touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (touchPointers.size === 1 && isPanning && e.pointerId === panPointerId) {
+                // 1손가락 패닝
+                const dx = panLastX - e.clientX;
+                const dy = panLastY - e.clientY;
+                mainEl.scrollLeft += dx;
+                mainEl.scrollTop += dy;
+                panLastX = e.clientX;
+                panLastY = e.clientY;
+
+            } else if (touchPointers.size === 2) {
+                // 2손가락 핀치줌 + 중심점 스크롤 보정
+                e.preventDefault();
+                const pts = Array.from(touchPointers.values());
+                const dist = getPointerDist(pts[0], pts[1]);
+                const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE,
+                    pinchStartScale * (dist / pinchStartDist)
+                ));
+
+                // 중심점 기준 스크롤 보정
+                const midX = (pts[0].x + pts[1].x) / 2;
+                const midY = (pts[0].y + pts[1].y) / 2;
+                const scaleDelta = newScale / currentScale;
+                mainEl.scrollLeft = (mainEl.scrollLeft + midX) * scaleDelta - midX;
+                mainEl.scrollTop = (mainEl.scrollTop + midY) * scaleDelta - midY;
+
+                smoothZoomTo(newScale);
+            }
+        }
+    }
+
+    // ── Pointer Up ──
+    function onPointerUp(e) {
+        if (e.pointerType === 'pen' || e.pointerType === 'mouse') {
+            isPenDrawing = false;
+            stopDraw(e);
+
+        } else if (e.pointerType === 'touch') {
+            touchPointers.delete(e.pointerId);
+
+            if (touchPointers.size === 0) {
+                isPanning = false;
+                panPointerId = null;
+            } else if (touchPointers.size === 1) {
+                // 핀치 → 1손가락으로 전환 시 패닝으로
+                isPanning = true;
+                const remaining = Array.from(touchPointers.values())[0];
+                panLastX = remaining.x;
+                panLastY = remaining.y;
+                panPointerId = Array.from(touchPointers.keys())[0];
+            }
+        }
+    }
+
+    // ── Pointer Leave ──
+    function onPointerLeave(e) {
+        if (e.pointerType === 'pen' || e.pointerType === 'mouse') {
+            if (isPenDrawing) {
+                isPenDrawing = false;
+                stopDraw(e);
+            }
         }
     }
 
