@@ -21,16 +21,16 @@
             --result-bg: #1e1e1e;
             --result-border: rgba(255,255,255,0.06);
         }
-
+ 
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
-
+ 
         body {
             display: flex; flex-direction: column; height: 100vh;
             background: var(--bg);
             font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
             overflow-x: hidden;
         }
-
+ 
         /* ── 헤더 ── */
         #header {
             background: var(--toolbar-bg);
@@ -71,7 +71,7 @@
         }
         .api-input:focus { border-color: var(--accent); }
         .api-input::placeholder { color: rgba(255,255,255,0.25); }
-
+ 
         /* ── 툴바 ── */
         #toolbar {
             background: var(--toolbar-bg);
@@ -132,7 +132,7 @@
             flex-shrink: 0;
         }
         .tb-select option { background: #2a2a2a; }
-
+ 
         /* AI 버튼 */
         .ai-btn {
             background: var(--accent);
@@ -152,7 +152,7 @@
         }
         .ai-btn:hover { background: var(--accent-dark); transform: translateY(-1px); }
         .ai-btn:disabled { background: #444; color: #777; cursor: not-allowed; transform: none; }
-
+ 
         /* 색상 팔레트 */
         .palette { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
         .color-dot {
@@ -162,13 +162,13 @@
         }
         .color-dot:hover { transform: scale(1.15); }
         .color-dot.active { border-color: var(--accent); transform: scale(1.2); box-shadow: 0 0 0 1px var(--accent); }
-
+ 
         /* 지우개 크기 */
         .size-indicator {
             font-size: 11px; color: var(--text-muted);
             padding: 0 6px; white-space: nowrap;
         }
-
+ 
         /* 지우기 버튼 */
         .clear-btn {
             background: rgba(220, 80, 60, 0.15);
@@ -184,7 +184,7 @@
             white-space: nowrap;
         }
         .clear-btn:hover { background: rgba(220,80,60,0.25); }
-
+ 
         /* ── 메인 영역 ── */
         #main {
             flex: 1;
@@ -192,15 +192,19 @@
             flex-direction: column;
             align-items: center;
             overflow-y: auto;
+            overflow-x: auto;
             padding: 32px 24px 48px;
             gap: 24px;
+            touch-action: pan-x pan-y;
         }
-
+ 
         /* 캔버스 */
         #canvas-wrapper {
             position: relative;
             box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
             border-radius: 2px;
+            transform-origin: top center;
+            transition: transform 0.05s;
         }
         canvas {
             display: block;
@@ -210,11 +214,29 @@
             border-radius: 2px;
         }
         canvas.eraser-mode { cursor: cell; }
-
+ 
+        /* 줌 인디케이터 */
+        #zoom-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(26,26,26,0.85);
+            color: var(--accent);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+        #zoom-indicator.visible { opacity: 1; }
+ 
         /* 질감 */
         canvas.texture-hanji { background-color: #f9f1de; }
         canvas.texture-kraft { background-color: #d9b97e; }
-
+ 
         /* ── AI 결과 ── */
         #ai-result {
             width: 842px;
@@ -249,7 +271,7 @@
         }
         #ai-text.placeholder { color: rgba(255,255,255,0.25); font-style: italic; }
         #ai-text.loading { color: rgba(255,255,255,0.4); }
-
+ 
         /* 로딩 애니메이션 */
         .dot-anim::after {
             content: '';
@@ -262,10 +284,10 @@
             75%  { content: '...'; }
             100% { content: ''; }
         }
-
+ 
         /* 에러 */
         #ai-text.error { color: #e05050; }
-
+ 
         /* 모델 선택 */
         .model-badge {
             font-size: 9px; letter-spacing: 0.08em;
@@ -277,7 +299,7 @@
     </style>
 </head>
 <body>
-
+ 
 <div id="header">
     <div class="header-logo">
         S-Sketch AI
@@ -288,31 +310,31 @@
         <input type="password" id="api-key" class="api-input" placeholder="Gemini API Key를 입력하세요">
     </div>
 </div>
-
+ 
 <div id="toolbar">
-
+ 
     <button id="btn-read-ai" class="ai-btn" onclick="readNoteWithAI()">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/>
         </svg>
         노트 읽어오기
     </button>
-
+ 
     <div class="sep"></div>
-
+ 
     <span class="tb-label">Pen</span>
     <button id="btn-ballpen" class="tb-btn active" onclick="setPen('ballpen')">볼펜</button>
     <button id="btn-pencil" class="tb-btn" onclick="setPen('pencil')">연필</button>
     <button id="btn-highlighter" class="tb-btn" onclick="setPen('highlighter')">형광펜</button>
     <button id="btn-eraser" class="tb-btn" onclick="setPen('eraser')">지우개</button>
-
+ 
     <div class="sep"></div>
-
+ 
     <span class="tb-label">Color</span>
     <div class="palette" id="palette"></div>
-
+ 
     <div class="sep"></div>
-
+ 
     <span class="tb-label">Template</span>
     <select class="tb-select" onchange="changeTemplate(this.value)">
         <option value="blank">빈 종이</option>
@@ -320,80 +342,157 @@
         <option value="grid">모눈종이</option>
         <option value="dot">도트</option>
     </select>
-
+ 
     <div class="sep"></div>
-
+ 
     <span class="tb-label">재질</span>
     <select class="tb-select" onchange="changeTexture(this.value)">
         <option value="">일반</option>
         <option value="hanji">한지</option>
         <option value="kraft">크라프트</option>
     </select>
-
+ 
     <div class="sep"></div>
-
+ 
     <select class="tb-select" id="model-select">
         <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
         <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
         <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
     </select>
-
+ 
     <div class="sep"></div>
-
+ 
     <button class="clear-btn" onclick="clearCanvas()">전체 삭제</button>
 </div>
-
+ 
+<div id="zoom-indicator">100%</div>
+ 
 <div id="main">
     <div id="canvas-wrapper">
         <canvas id="noteCanvas" width="842" height="1100"></canvas>
     </div>
-
+ 
     <div id="ai-result">
         <div class="result-label">AI 인식 결과</div>
         <div id="ai-text" class="placeholder">위 버튼을 눌러 AI가 노트를 읽게 하세요.</div>
     </div>
 </div>
-
+ 
 <script>
     const canvas = document.getElementById('noteCanvas');
     const ctx = canvas.getContext('2d');
     const aiText = document.getElementById('ai-text');
     const aiBtn = document.getElementById('btn-read-ai');
-
+ 
     let isDrawing = false;
     let lastX = 0, lastY = 0;
     let currentPen = 'ballpen';
     let currentColor = '#1a1a1a';
     let currentTemplate = 'blank';
-
+ 
+    // 핀치줌 상태
+    let currentScale = 1.0;
+    const MIN_SCALE = 0.3, MAX_SCALE = 4.0;
+    let pinchStartDist = 0;
+    let pinchStartScale = 1.0;
+    let activeTouches = new Map();
+    const wrapper = document.getElementById('canvas-wrapper');
+    const zoomIndicator = document.getElementById('zoom-indicator');
+    let zoomTimeout = null;
+ 
+    function showZoom() {
+        zoomIndicator.textContent = Math.round(currentScale * 100) + '%';
+        zoomIndicator.classList.add('visible');
+        clearTimeout(zoomTimeout);
+        zoomTimeout = setTimeout(() => zoomIndicator.classList.remove('visible'), 1200);
+    }
+ 
+    function applyScale() {
+        wrapper.style.transform = `scale(${currentScale})`;
+        showZoom();
+    }
+ 
     // 배경 레이어 (별도 캔버스로 분리 — 핵심 버그 수정)
     const bgCanvas = document.createElement('canvas');
     bgCanvas.width = 842; bgCanvas.height = 1100;
     const bgCtx = bgCanvas.getContext('2d');
-
+ 
     const COLORS = [
         '#1a1a1a','#e8344a','#1a6fc4','#2a9d60','#e07b20',
         '#8b3fc8','#c4a030','#5a9fbf',
         '#fbbdbd','#bdd6f8','#b8edcc','#fff0b8'
     ];
-
+ 
     const PEN_SETTINGS = {
         ballpen:     { size: 3,  alpha: 1.0, cap: 'round', composite: 'source-over' },
         pencil:      { size: 4,  alpha: 0.45, cap: 'butt',  composite: 'source-over' },
         highlighter: { size: 18, alpha: 0.35, cap: 'square',composite: 'source-over' },
         eraser:      { size: 28, alpha: 1.0, cap: 'round', composite: 'destination-out' },
     };
-
+ 
     window.onload = () => {
         buildPalette();
         drawBackground();
-        canvas.addEventListener('pointerdown', startDraw);
-        canvas.addEventListener('pointermove', draw);
-        canvas.addEventListener('pointerup', stopDraw);
-        canvas.addEventListener('pointerleave', stopDraw);  // 버그 수정: pointerout → pointerleave
+        render();
+ 
+        // S펜만 드로잉, 손가락은 스크롤/줌
+        canvas.addEventListener('pointerdown', e => {
+            if (e.pointerType === 'touch') return; // 손가락 터치 무시
+            startDraw(e);
+        });
+        canvas.addEventListener('pointermove', e => {
+            if (e.pointerType === 'touch') return;
+            draw(e);
+        });
+        canvas.addEventListener('pointerup', e => {
+            if (e.pointerType === 'touch') return;
+            stopDraw(e);
+        });
+        canvas.addEventListener('pointerleave', e => {
+            if (e.pointerType === 'touch') return;
+            stopDraw(e);
+        });
         canvas.addEventListener('contextmenu', e => e.preventDefault());
+ 
+        // 핀치줌 (touch events)
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
     };
-
+ 
+    function getTouchDist(t1, t2) {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+ 
+    function handleTouchStart(e) {
+        Array.from(e.changedTouches).forEach(t => activeTouches.set(t.identifier, t));
+        if (activeTouches.size === 2) {
+            e.preventDefault();
+            const touches = Array.from(activeTouches.values());
+            pinchStartDist = getTouchDist(touches[0], touches[1]);
+            pinchStartScale = currentScale;
+        }
+    }
+ 
+    function handleTouchMove(e) {
+        Array.from(e.changedTouches).forEach(t => activeTouches.set(t.identifier, t));
+        if (activeTouches.size === 2) {
+            e.preventDefault();
+            const touches = Array.from(activeTouches.values());
+            const dist = getTouchDist(touches[0], touches[1]);
+            let newScale = pinchStartScale * (dist / pinchStartDist);
+            newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
+            currentScale = newScale;
+            applyScale();
+        }
+    }
+ 
+    function handleTouchEnd(e) {
+        Array.from(e.changedTouches).forEach(t => activeTouches.delete(t.identifier));
+    }
+ 
     function buildPalette() {
         const el = document.getElementById('palette');
         COLORS.forEach((c, i) => {
@@ -410,7 +509,7 @@
             el.appendChild(d);
         });
     }
-
+ 
     function setPen(type) {
         currentPen = type;
         ['ballpen','pencil','highlighter','eraser'].forEach(id => {
@@ -419,28 +518,28 @@
         });
         canvas.classList.toggle('eraser-mode', type === 'eraser');
     }
-
+ 
     function changeTexture(val) {
         canvas.className = val ? `texture-${val}` : '';
         if (currentPen === 'eraser') canvas.classList.add('eraser-mode');
     }
-
+ 
     function changeTemplate(t) {
         currentTemplate = t;
         drawBackground();
         composite();
     }
-
+ 
     // 배경 전용 캔버스에 선 그리기 — 핵심 수정 (내용과 배경 분리)
     function drawBackground() {
         bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
         if (currentTemplate === 'blank') return;
-
+ 
         bgCtx.save();
         const LINE_COLOR = 'rgba(120,120,200,0.12)';
         bgCtx.strokeStyle = LINE_COLOR;
         bgCtx.lineWidth = 0.8;
-
+ 
         if (currentTemplate === 'ruled') {
             for (let y = 80; y < bgCanvas.height; y += 40) {
                 bgCtx.beginPath();
@@ -466,25 +565,25 @@
         }
         bgCtx.restore();
     }
-
+ 
     // 배경 + 드로잉 레이어 합성
     function composite() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(bgCanvas, 0, 0);
     }
-
+ 
     // 드로잉 전용 캔버스 (별도)
     const drawCanvas = document.createElement('canvas');
     drawCanvas.width = 842; drawCanvas.height = 1100;
     const drawCtx = drawCanvas.getContext('2d');
-
+ 
     // 실제 렌더: bg + drawing 합성
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(bgCanvas, 0, 0);
         ctx.drawImage(drawCanvas, 0, 0);
     }
-
+ 
     function startDraw(e) {
         e.preventDefault();
         isDrawing = true;
@@ -501,19 +600,19 @@
         drawCtx.restore();
         render();
     }
-
+ 
     function draw(e) {
         if (!isDrawing) return;
         e.preventDefault();
         const [x, y] = getCoords(e);
         const s = PEN_SETTINGS[currentPen];
-
+ 
         // S펜 압력 지원
         const pressure = e.pressure !== undefined && e.pressure > 0 ? e.pressure : 0.5;
         const dynamicSize = currentPen === 'ballpen'
             ? s.size * (0.6 + pressure * 0.8)
             : s.size;
-
+ 
         drawCtx.save();
         drawCtx.globalAlpha = s.alpha;
         drawCtx.globalCompositeOperation = s.composite;
@@ -521,22 +620,22 @@
         drawCtx.lineWidth = dynamicSize;
         drawCtx.lineCap = s.cap;
         drawCtx.lineJoin = 'round';
-
+ 
         drawCtx.beginPath();
         drawCtx.moveTo(lastX, lastY);
         drawCtx.lineTo(x, y);
         drawCtx.stroke();
         drawCtx.restore();
-
+ 
         [lastX, lastY] = [x, y];
         render();
     }
-
+ 
     function stopDraw(e) {
         if (!isDrawing) return;
         isDrawing = false;
     }
-
+ 
     function getCoords(e) {
         const rect = canvas.getBoundingClientRect();
         return [
@@ -544,7 +643,7 @@
             (e.clientY - rect.top) * (canvas.height / rect.height)
         ];
     }
-
+ 
     function clearCanvas() {
         if (!confirm('전체 내용을 삭제할까요?')) return;
         drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
@@ -552,17 +651,17 @@
         aiText.className = 'placeholder';
         aiText.textContent = '위 버튼을 눌러 AI가 노트를 읽게 하세요.';
     }
-
+ 
     // ── Gemini AI 연동 (버그 수정) ──
     async function readNoteWithAI() {
         const apiKey = document.getElementById('api-key').value.trim();
         const model = document.getElementById('model-select').value;
         if (!apiKey) { alert('Gemini API Key를 입력해주세요!'); return; }
-
+ 
         aiBtn.disabled = true;
         aiText.className = 'loading dot-anim';
         aiText.textContent = 'AI가 필기를 분석하고 있습니다';
-
+ 
         try {
             // AI에게는 배경선 없이 드로잉만 보냄 (더 정확한 인식)
             const exportCanvas = document.createElement('canvas');
@@ -572,9 +671,9 @@
             exportCtx.fillStyle = '#ffffff';
             exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
             exportCtx.drawImage(drawCanvas, 0, 0);  // 드로잉만 (배경선 제외)
-
+ 
             const base64Image = exportCanvas.toDataURL('image/jpeg', 0.9).split(',')[1];
-
+ 
             const resp = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
                 {
@@ -595,14 +694,14 @@
                     })
                 }
             );
-
+ 
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({}));
                 throw new Error(err.error?.message || `HTTP ${resp.status}`);
             }
-
+ 
             const data = await resp.json();
-
+ 
             // 안전한 응답 파싱 (버그 수정)
             const candidate = data?.candidates?.[0];
             if (!candidate) {
@@ -612,13 +711,13 @@
             if (candidate.finishReason === 'SAFETY') {
                 throw new Error('안전 정책으로 인해 응답이 차단되었습니다.');
             }
-
+ 
             const resultText = candidate?.content?.parts?.[0]?.text;
             if (!resultText) throw new Error('AI가 텍스트를 반환하지 않았습니다.');
-
+ 
             aiText.className = '';
             aiText.textContent = resultText;
-
+ 
         } catch (err) {
             console.error('[S-Sketch AI]', err);
             aiText.className = 'error';
@@ -627,9 +726,8 @@
             aiBtn.disabled = false;
         }
     }
-
-    // 초기 렌더
-    render();
+ 
+    // 초기 렌더는 onload에서 실행
 </script>
 </body>
 </html>
