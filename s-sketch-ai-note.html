@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S-Sketch AI Note</title>
+    <style>
+        :root {
+            --bg: #f0ede8;
+            --toolbar-bg: #1a1a1a;
+            --canvas-bg: #ffffff;
+            --accent: #e8c547;
+            --accent-dark: #c4a030;
+            --text-primary: #f5f0e8;
+            --text-muted: #888;
+            --border: rgba(255,255,255,0.08);
+            --btn-bg: rgba(255,255,255,0.07);
+            --btn-hover: rgba(255,255,255,0.13);
+            --btn-active-bg: var(--accent);
+            --btn-active-color: #1a1a1a;
+            --result-bg: #1e1e1e;
+            --result-border: rgba(255,255,255,0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+        body {
+            display: flex; flex-direction: column; height: 100vh;
+            background: var(--bg);
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ── 헤더 ── */
+        #header {
+            background: var(--toolbar-bg);
+            color: var(--text-primary);
+            padding: 0 24px;
+            height: 52px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .header-logo {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--accent);
+        }
+        .header-logo span {
+            color: rgba(255,255,255,0.4);
+            font-weight: 400;
+            font-size: 11px;
+            margin-left: 8px;
+            letter-spacing: 0.04em;
+        }
+        .api-wrap { display: flex; align-items: center; gap: 8px; }
+        .api-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+        .api-input {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            width: 240px;
+            font-size: 12px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .api-input:focus { border-color: var(--accent); }
+        .api-input::placeholder { color: rgba(255,255,255,0.25); }
+
+        /* ── 툴바 ── */
+        #toolbar {
+            background: var(--toolbar-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+        .sep {
+            width: 1px; height: 24px;
+            background: rgba(255,255,255,0.1);
+            margin: 0 8px;
+            flex-shrink: 0;
+        }
+        .tb-label {
+            font-size: 9px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-right: 4px;
+            white-space: nowrap;
+        }
+        .tb-btn {
+            background: var(--btn-bg);
+            border: 1px solid transparent;
+            color: rgba(255,255,255,0.7);
+            padding: 0 14px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .tb-btn:hover { background: var(--btn-hover); color: #fff; }
+        .tb-btn.active {
+            background: var(--accent);
+            color: #1a1a1a;
+            font-weight: 600;
+            border-color: transparent;
+        }
+        .tb-select {
+            background: var(--btn-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+            padding: 0 10px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            outline: none;
+            flex-shrink: 0;
+        }
+        .tb-select option { background: #2a2a2a; }
+
+        /* AI 버튼 */
+        .ai-btn {
+            background: var(--accent);
+            color: #1a1a1a;
+            border: none;
+            height: 34px;
+            padding: 0 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: all 0.15s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .ai-btn:hover { background: var(--accent-dark); transform: translateY(-1px); }
+        .ai-btn:disabled { background: #444; color: #777; cursor: not-allowed; transform: none; }
+
+        /* 색상 팔레트 */
+        .palette { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+        .color-dot {
+            width: 22px; height: 22px; border-radius: 50%;
+            cursor: pointer; border: 2px solid transparent;
+            transition: all 0.15s; flex-shrink: 0;
+        }
+        .color-dot:hover { transform: scale(1.15); }
+        .color-dot.active { border-color: var(--accent); transform: scale(1.2); box-shadow: 0 0 0 1px var(--accent); }
+
+        /* 지우개 크기 */
+        .size-indicator {
+            font-size: 11px; color: var(--text-muted);
+            padding: 0 6px; white-space: nowrap;
+        }
+
+        /* 지우기 버튼 */
+        .clear-btn {
+            background: rgba(220, 80, 60, 0.15);
+            border: 1px solid rgba(220,80,60,0.2);
+            color: #e05050;
+            padding: 0 14px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            flex-shrink: 0;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .clear-btn:hover { background: rgba(220,80,60,0.25); }
+
+        /* ── 메인 영역 ── */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+            padding: 32px 24px 48px;
+            gap: 24px;
+        }
+
+        /* 캔버스 */
+        #canvas-wrapper {
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 2px;
+        }
+        canvas {
+            display: block;
+            background: #ffffff;
+            cursor: crosshair;
+            touch-action: none;
+            border-radius: 2px;
+        }
+        canvas.eraser-mode { cursor: cell; }
+
+        /* 질감 */
+        canvas.texture-hanji { background-color: #f9f1de; }
+        canvas.texture-kraft { background-color: #d9b97e; }
+
+        /* ── AI 결과 ── */
+        #ai-result {
+            width: 842px;
+            background: var(--result-bg);
+            border: 1px solid var(--result-border);
+            border-radius: 10px;
+            padding: 24px 28px;
+        }
+        .result-label {
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .result-label::before {
+            content: '';
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+        #ai-text {
+            font-size: 15px;
+            line-height: 1.75;
+            color: rgba(255,255,255,0.75);
+            white-space: pre-wrap;
+            min-height: 48px;
+        }
+        #ai-text.placeholder { color: rgba(255,255,255,0.25); font-style: italic; }
+        #ai-text.loading { color: rgba(255,255,255,0.4); }
+
+        /* 로딩 애니메이션 */
+        .dot-anim::after {
+            content: '';
+            animation: dots 1.2s infinite;
+        }
+        @keyframes dots {
+            0%   { content: ''; }
+            25%  { content: '.'; }
+            50%  { content: '..'; }
+            75%  { content: '...'; }
+            100% { content: ''; }
+        }
+
+        /* 에러 */
+        #ai-text.error { color: #e05050; }
+
+        /* 모델 선택 */
+        .model-badge {
+            font-size: 9px; letter-spacing: 0.08em;
+            background: rgba(232,197,71,0.15);
+            color: var(--accent);
+            padding: 2px 8px; border-radius: 4px;
+            border: 1px solid rgba(232,197,71,0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <div class="header-logo">
+        S-Sketch AI
+        <span>Gemini Multimodal</span>
+    </div>
+    <div class="api-wrap">
+        <span class="api-label">API Key</span>
+        <input type="password" id="api-key" class="api-input" placeholder="Gemini API Key를 입력하세요">
+    </div>
+</div>
+
+<div id="toolbar">
+
+    <button id="btn-read-ai" class="ai-btn" onclick="readNoteWithAI()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/>
+        </svg>
+        노트 읽어오기
+    </button>
+
+    <div class="sep"></div>
+
+    <span class="tb-label">Pen</span>
+    <button id="btn-ballpen" class="tb-btn active" onclick="setPen('ballpen')">볼펜</button>
+    <button id="btn-pencil" class="tb-btn" onclick="setPen('pencil')">연필</button>
+    <button id="btn-highlighter" class="tb-btn" onclick="setPen('highlighter')">형광펜</button>
+    <button id="btn-eraser" class="tb-btn" onclick="setPen('eraser')">지우개</button>
+
+    <div class="sep"></div>
+
+    <span class="tb-label">Color</span>
+    <div class="palette" id="palette"></div>
+
+    <div class="sep"></div>
+
+    <span class="tb-label">Template</span>
+    <select class="tb-select" onchange="changeTemplate(this.value)">
+        <option value="blank">빈 종이</option>
+        <option value="ruled">줄노트</option>
+        <option value="grid">모눈종이</option>
+        <option value="dot">도트</option>
+    </select>
+
+    <div class="sep"></div>
+
+    <span class="tb-label">재질</span>
+    <select class="tb-select" onchange="changeTexture(this.value)">
+        <option value="">일반</option>
+        <option value="hanji">한지</option>
+        <option value="kraft">크라프트</option>
+    </select>
+
+    <div class="sep"></div>
+
+    <select class="tb-select" id="model-select">
+        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+    </select>
+
+    <div class="sep"></div>
+
+    <button class="clear-btn" onclick="clearCanvas()">전체 삭제</button>
+</div>
+
+<div id="main">
+    <div id="canvas-wrapper">
+        <canvas id="noteCanvas" width="842" height="1100"></canvas>
+    </div>
+
+    <div id="ai-result">
+        <div class="result-label">AI 인식 결과</div>
+        <div id="ai-text" class="placeholder">위 버튼을 눌러 AI가 노트를 읽게 하세요.</div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('noteCanvas');
+    const ctx = canvas.getContext('2d');
+    const aiText = document.getElementById('ai-text');
+    const aiBtn = document.getElementById('btn-read-ai');
+
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+    let currentPen = 'ballpen';
+    let currentColor = '#1a1a1a';
+    let currentTemplate = 'blank';
+
+    // 배경 레이어 (별도 캔버스로 분리 — 핵심 버그 수정)
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = 842; bgCanvas.height = 1100;
+    const bgCtx = bgCanvas.getContext('2d');
+
+    const COLORS = [
+        '#1a1a1a','#e8344a','#1a6fc4','#2a9d60','#e07b20',
+        '#8b3fc8','#c4a030','#5a9fbf',
+        '#fbbdbd','#bdd6f8','#b8edcc','#fff0b8'
+    ];
+
+    const PEN_SETTINGS = {
+        ballpen:     { size: 3,  alpha: 1.0, cap: 'round', composite: 'source-over' },
+        pencil:      { size: 4,  alpha: 0.45, cap: 'butt',  composite: 'source-over' },
+        highlighter: { size: 18, alpha: 0.35, cap: 'square',composite: 'source-over' },
+        eraser:      { size: 28, alpha: 1.0, cap: 'round', composite: 'destination-out' },
+    };
+
+    window.onload = () => {
+        buildPalette();
+        drawBackground();
+        canvas.addEventListener('pointerdown', startDraw);
+        canvas.addEventListener('pointermove', draw);
+        canvas.addEventListener('pointerup', stopDraw);
+        canvas.addEventListener('pointerleave', stopDraw);  // 버그 수정: pointerout → pointerleave
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+    };
+
+    function buildPalette() {
+        const el = document.getElementById('palette');
+        COLORS.forEach((c, i) => {
+            const d = document.createElement('div');
+            d.className = `color-dot ${i === 0 ? 'active' : ''}`;
+            d.style.background = c;
+            d.style.border = c === '#ffffff' || c === '#fff0b8' ? '1px solid rgba(255,255,255,0.2)' : '';
+            d.onclick = () => {
+                document.querySelectorAll('.color-dot').forEach(x => x.classList.remove('active'));
+                d.classList.add('active');
+                currentColor = c;
+                if (currentPen === 'eraser') setPen('ballpen');
+            };
+            el.appendChild(d);
+        });
+    }
+
+    function setPen(type) {
+        currentPen = type;
+        ['ballpen','pencil','highlighter','eraser'].forEach(id => {
+            const el = document.getElementById(`btn-${id}`);
+            if (el) el.classList.toggle('active', id === type);
+        });
+        canvas.classList.toggle('eraser-mode', type === 'eraser');
+    }
+
+    function changeTexture(val) {
+        canvas.className = val ? `texture-${val}` : '';
+        if (currentPen === 'eraser') canvas.classList.add('eraser-mode');
+    }
+
+    function changeTemplate(t) {
+        currentTemplate = t;
+        drawBackground();
+        composite();
+    }
+
+    // 배경 전용 캔버스에 선 그리기 — 핵심 수정 (내용과 배경 분리)
+    function drawBackground() {
+        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        if (currentTemplate === 'blank') return;
+
+        bgCtx.save();
+        const LINE_COLOR = 'rgba(120,120,200,0.12)';
+        bgCtx.strokeStyle = LINE_COLOR;
+        bgCtx.lineWidth = 0.8;
+
+        if (currentTemplate === 'ruled') {
+            for (let y = 80; y < bgCanvas.height; y += 40) {
+                bgCtx.beginPath();
+                bgCtx.moveTo(0, y); bgCtx.lineTo(bgCanvas.width, y);
+                bgCtx.stroke();
+            }
+        } else if (currentTemplate === 'grid') {
+            for (let x = 40; x < bgCanvas.width; x += 40) {
+                bgCtx.beginPath(); bgCtx.moveTo(x, 0); bgCtx.lineTo(x, bgCanvas.height); bgCtx.stroke();
+            }
+            for (let y = 40; y < bgCanvas.height; y += 40) {
+                bgCtx.beginPath(); bgCtx.moveTo(0, y); bgCtx.lineTo(bgCanvas.width, y); bgCtx.stroke();
+            }
+        } else if (currentTemplate === 'dot') {
+            bgCtx.fillStyle = 'rgba(120,120,200,0.25)';
+            for (let x = 40; x < bgCanvas.width; x += 40) {
+                for (let y = 40; y < bgCanvas.height; y += 40) {
+                    bgCtx.beginPath();
+                    bgCtx.arc(x, y, 1.2, 0, Math.PI * 2);
+                    bgCtx.fill();
+                }
+            }
+        }
+        bgCtx.restore();
+    }
+
+    // 배경 + 드로잉 레이어 합성
+    function composite() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(bgCanvas, 0, 0);
+    }
+
+    // 드로잉 전용 캔버스 (별도)
+    const drawCanvas = document.createElement('canvas');
+    drawCanvas.width = 842; drawCanvas.height = 1100;
+    const drawCtx = drawCanvas.getContext('2d');
+
+    // 실제 렌더: bg + drawing 합성
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(bgCanvas, 0, 0);
+        ctx.drawImage(drawCanvas, 0, 0);
+    }
+
+    function startDraw(e) {
+        e.preventDefault();
+        isDrawing = true;
+        [lastX, lastY] = getCoords(e);
+        // 점 찍기 (클릭만 했을 때도 점 남도록)
+        const s = PEN_SETTINGS[currentPen];
+        drawCtx.save();
+        drawCtx.globalAlpha = s.alpha;
+        drawCtx.globalCompositeOperation = s.composite;
+        drawCtx.fillStyle = s.composite === 'destination-out' ? 'rgba(0,0,0,1)' : currentColor;
+        drawCtx.beginPath();
+        drawCtx.arc(lastX, lastY, s.size / 2, 0, Math.PI * 2);
+        drawCtx.fill();
+        drawCtx.restore();
+        render();
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const [x, y] = getCoords(e);
+        const s = PEN_SETTINGS[currentPen];
+
+        // S펜 압력 지원
+        const pressure = e.pressure !== undefined && e.pressure > 0 ? e.pressure : 0.5;
+        const dynamicSize = currentPen === 'ballpen'
+            ? s.size * (0.6 + pressure * 0.8)
+            : s.size;
+
+        drawCtx.save();
+        drawCtx.globalAlpha = s.alpha;
+        drawCtx.globalCompositeOperation = s.composite;
+        drawCtx.strokeStyle = s.composite === 'destination-out' ? 'rgba(0,0,0,1)' : currentColor;
+        drawCtx.lineWidth = dynamicSize;
+        drawCtx.lineCap = s.cap;
+        drawCtx.lineJoin = 'round';
+
+        drawCtx.beginPath();
+        drawCtx.moveTo(lastX, lastY);
+        drawCtx.lineTo(x, y);
+        drawCtx.stroke();
+        drawCtx.restore();
+
+        [lastX, lastY] = [x, y];
+        render();
+    }
+
+    function stopDraw(e) {
+        if (!isDrawing) return;
+        isDrawing = false;
+    }
+
+    function getCoords(e) {
+        const rect = canvas.getBoundingClientRect();
+        return [
+            (e.clientX - rect.left) * (canvas.width / rect.width),
+            (e.clientY - rect.top) * (canvas.height / rect.height)
+        ];
+    }
+
+    function clearCanvas() {
+        if (!confirm('전체 내용을 삭제할까요?')) return;
+        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        render();
+        aiText.className = 'placeholder';
+        aiText.textContent = '위 버튼을 눌러 AI가 노트를 읽게 하세요.';
+    }
+
+    // ── Gemini AI 연동 (버그 수정) ──
+    async function readNoteWithAI() {
+        const apiKey = document.getElementById('api-key').value.trim();
+        const model = document.getElementById('model-select').value;
+        if (!apiKey) { alert('Gemini API Key를 입력해주세요!'); return; }
+
+        aiBtn.disabled = true;
+        aiText.className = 'loading dot-anim';
+        aiText.textContent = 'AI가 필기를 분석하고 있습니다';
+
+        try {
+            // AI에게는 배경선 없이 드로잉만 보냄 (더 정확한 인식)
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = canvas.width;
+            exportCanvas.height = canvas.height;
+            const exportCtx = exportCanvas.getContext('2d');
+            exportCtx.fillStyle = '#ffffff';
+            exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+            exportCtx.drawImage(drawCanvas, 0, 0);  // 드로잉만 (배경선 제외)
+
+            const base64Image = exportCanvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+
+            const resp = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                {
+                                    text: `이 이미지는 사용자가 직접 손글씨로 쓴 노트입니다.\n다음 규칙을 따라 출력해주세요:\n1. 이미지에 적힌 모든 글자를 빠짐없이 읽어서 텍스트로 변환하세요.\n2. 그림이나 도형이 있다면 [그림: 설명] 형식으로 간략히 설명하세요.\n3. 이미지가 완전히 비어있다면 "(빈 캔버스)" 라고만 출력하세요.\n4. 그 외 어떤 안내 문구도 추가하지 마세요. 내용만 출력하세요.`
+                                },
+                                {
+                                    inlineData: { mimeType: 'image/jpeg', data: base64Image }
+                                }
+                            ]
+                        }],
+                        generationConfig: { temperature: 0.1 }
+                    })
+                }
+            );
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error?.message || `HTTP ${resp.status}`);
+            }
+
+            const data = await resp.json();
+
+            // 안전한 응답 파싱 (버그 수정)
+            const candidate = data?.candidates?.[0];
+            if (!candidate) {
+                const blockReason = data?.promptFeedback?.blockReason;
+                throw new Error(blockReason ? `차단됨: ${blockReason}` : '응답이 없습니다.');
+            }
+            if (candidate.finishReason === 'SAFETY') {
+                throw new Error('안전 정책으로 인해 응답이 차단되었습니다.');
+            }
+
+            const resultText = candidate?.content?.parts?.[0]?.text;
+            if (!resultText) throw new Error('AI가 텍스트를 반환하지 않았습니다.');
+
+            aiText.className = '';
+            aiText.textContent = resultText;
+
+        } catch (err) {
+            console.error('[S-Sketch AI]', err);
+            aiText.className = 'error';
+            aiText.textContent = `오류: ${err.message}\n\nAPI 키 또는 네트워크를 확인해주세요.`;
+        } finally {
+            aiBtn.disabled = false;
+        }
+    }
+
+    // 초기 렌더
+    render();
+</script>
+</body>
+</html>
