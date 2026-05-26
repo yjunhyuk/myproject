@@ -485,8 +485,10 @@
         drawBackground();
         render();
 
-        // 초기 스크롤 중앙 (좌우 400px 패딩 기준)
-        setTimeout(() => { mainEl.scrollLeft = 400; }, 50);
+        // 초기 스크롤 중앙 (동적 계산)
+        setTimeout(() => {
+            mainEl.scrollLeft = (mainEl.scrollWidth - mainEl.clientWidth) / 2;
+        }, 50);
 
         canvas.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -551,21 +553,13 @@
                 panLastY = e.clientY;
 
             } else if (touchPointers.size === 2) {
-                // 2손가락 핀치줌 + 중심점 스크롤 보정
+                // 2손가락 핀치줌
                 e.preventDefault();
                 const pts = Array.from(touchPointers.values());
                 const dist = getPointerDist(pts[0], pts[1]);
                 const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE,
                     pinchStartScale * (dist / pinchStartDist)
                 ));
-
-                // 중심점 기준 스크롤 보정
-                const midX = (pts[0].x + pts[1].x) / 2;
-                const midY = (pts[0].y + pts[1].y) / 2;
-                const scaleDelta = newScale / currentScale;
-                mainEl.scrollLeft = (mainEl.scrollLeft + midX) * scaleDelta - midX;
-                mainEl.scrollTop = (mainEl.scrollTop + midY) * scaleDelta - midY;
-
                 smoothZoomTo(newScale);
             }
         }
