@@ -711,7 +711,6 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
                 <button class="dev-btn" onclick="devAddGift()" style="width:100%;">등록</button>
             </div>
             <div style="margin-top:4px;margin-bottom:10px;">
-                <button class="dev-btn secondary" onclick="devGenPassword()" style="width:100%;margin-bottom:6px;">🔐 30자리 암호 생성</button>
                 <div id="dev-pw-result" style="display:none;" class="pw-box"></div>
             </div>
             <div id="dev-gift-list"></div>
@@ -2159,17 +2158,19 @@ async function devAddGift(){
     const cost=parseInt(document.getElementById('dev-gift-cost').value);
     if(!name){showToast('이름을 입력해주세요!');return;}
     if(isNaN(cost)||cost<=0){showToast('코인 수를 입력해주세요!');return;}
-    const pwEl=document.getElementById('dev-pw-result');
-    const pw=pwEl.style.display!=='none'?pwEl.textContent:'';
-    if(!pw){showToast('먼저 암호를 생성해주세요!');return;}
+    // 암호 자동 생성
+    const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+    let pw='';
+    const arr=new Uint8Array(30);
+    crypto.getRandomValues(arr);
+    arr.forEach(b=>pw+=chars[b%chars.length]);
     const gifts=await sbGet('axis_gifts',[]);
     gifts.push({id:Date.now(),name,cost,pw,img:devGiftImgData||null});
     await sbSet('axis_gifts',gifts);
     document.getElementById('dev-gift-name').value='';
     document.getElementById('dev-gift-cost').value='';
-    document.getElementById('dev-pw-result').style.display='none';
     devClearGiftImg();
-    showToast(`🎁 "${name}" 등록됨!`);
+    showToast(`🎁 "${name}" 등록됨!`,2500);
     await devRenderGifts();
     renderShop();
 }
