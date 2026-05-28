@@ -1,838 +1,1826 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S-Sketch AI Note</title>
-    <style>
-        :root {
-            --bg: #f0ede8;
-            --toolbar-bg: #1a1a1a;
-            --canvas-bg: #ffffff;
-            --accent: #e8c547;
-            --accent-dark: #c4a030;
-            --text-primary: #f5f0e8;
-            --text-muted: #888;
-            --border: rgba(255,255,255,0.08);
-            --btn-bg: rgba(255,255,255,0.07);
-            --btn-hover: rgba(255,255,255,0.13);
-            --btn-active-bg: var(--accent);
-            --btn-active-color: #1a1a1a;
-            --result-bg: #1e1e1e;
-            --result-border: rgba(255,255,255,0.06);
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AXIS — Study OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    --black:#080808; --surface:#0f0f10; --surface2:#141416; --surface3:#1c1c20;
+    --purple:#7c3aed; --pl:#a855f7; --pglow:rgba(124,58,237,0.25); --pdim:rgba(124,58,237,0.08);
+    --white:#f8f6ff; --w60:rgba(248,246,255,0.6); --w30:rgba(248,246,255,0.3);
+    --w10:rgba(248,246,255,0.1); --w05:rgba(248,246,255,0.05);
+    --green:#22d3a0; --red:#f43f5e; --gold:#f59e0b;
+    --border:rgba(255,255,255,0.07);
+    --min-c:#f43f5e; --base-c:#f59e0b; --bonus-c:#22d3a0;
+    --accent:#e8c547;
+    --btn-bg:rgba(255,255,255,0.07); --btn-hover:rgba(255,255,255,0.13);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
 
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+/* 배경 */
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.5;}
+.orb{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0;animation:orbf 9s ease-in-out infinite;}
+.orb1{width:600px;height:600px;background:radial-gradient(circle,rgba(124,58,237,0.18) 0%,transparent 70%);top:-150px;right:-150px;}
+.orb2{width:350px;height:350px;background:radial-gradient(circle,rgba(168,85,247,0.1) 0%,transparent 70%);bottom:50px;left:-80px;animation-delay:-5s;}
+@keyframes orbf{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
+body.note-active #stars,body.note-active .orb{display:none;}
 
-        body {
-            display: flex; flex-direction: column; height: 100vh;
-            background: var(--bg);
-            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
-            overflow-x: hidden;
-        }
+/* ── 헤더 ── */
+#header{position:relative;z-index:100;background:rgba(8,8,8,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;padding:0 24px;height:52px;flex-shrink:0;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;letter-spacing:.1em;background:linear-gradient(135deg,#fff 0%,var(--pl) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo sub{font-size:9px;letter-spacing:.15em;-webkit-text-fill-color:rgba(200,180,255,0.35);font-weight:400;margin-left:8px;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.coin-pill{display:flex;align-items:center;gap:7px;background:var(--pdim);border:1px solid rgba(124,58,237,0.25);padding:6px 14px;border-radius:100px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--pl);flex-shrink:0;}
+#pin-display{background:var(--surface3);border:1px solid var(--border);padding:6px 13px;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;letter-spacing:.2em;color:var(--w60);cursor:pointer;flex-shrink:0;white-space:nowrap;}
+.hdr-btn{background:none;border:1px solid var(--border);color:var(--w30);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:11px;font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.06em;transition:all .2s;flex-shrink:0;white-space:nowrap;}
+.hdr-btn:hover{border-color:var(--purple);color:var(--pl);}
+.api-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.api-inp{background:var(--surface);border:1px solid var(--border);color:var(--w60);padding:6px 12px;border-radius:8px;font-size:12px;outline:none;width:180px;font-family:'DM Sans',sans-serif;transition:border .2s;}
+.api-inp:focus{border-color:var(--purple);}
+.api-inp::placeholder{color:var(--w30);}
+.api-test-btn{background:var(--pdim);border:1px solid rgba(124,58,237,.3);color:var(--pl);padding:6px 10px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;transition:all .2s;font-family:'Syne',sans-serif;}
+.api-test-btn:hover{background:rgba(124,58,237,.2);}
 
-        /* ── 헤더 ── */
-        #header {
-            background: var(--toolbar-bg);
-            color: var(--text-primary);
-            padding: 0 24px;
-            height: 52px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-        .header-logo {
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            color: var(--accent);
-        }
-        .header-logo span {
-            color: rgba(255,255,255,0.4);
-            font-weight: 400;
-            font-size: 11px;
-            margin-left: 8px;
-            letter-spacing: 0.04em;
-        }
-        .api-wrap { display: flex; align-items: center; gap: 8px; }
-        .api-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
-        .api-input {
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.12);
-            color: var(--text-primary);
-            padding: 6px 12px;
-            border-radius: 6px;
-            width: 240px;
-            font-size: 12px;
-            outline: none;
-            transition: border 0.2s;
-        }
-        .api-input:focus { border-color: var(--accent); }
-        .api-input::placeholder { color: rgba(255,255,255,0.25); }
+/* ── 탭 네비게이션 ── */
+#tab-nav{position:relative;z-index:100;background:rgba(8,8,8,0.92);border-bottom:1px solid var(--border);display:flex;gap:4px;padding:8px 20px;flex-shrink:0;}
+.tab-btn{background:var(--btn-bg);border:1px solid transparent;color:rgba(255,255,255,0.4);padding:7px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;font-family:'Syne',sans-serif;letter-spacing:.04em;transition:all .15s;}
+.tab-btn:hover{color:#fff;background:var(--btn-hover);}
+.tab-btn.active{background:linear-gradient(135deg,var(--purple),var(--pl));color:#fff;box-shadow:0 0 12px var(--pglow);}
 
-        /* ── 툴바 ── */
-        #toolbar {
-            background: var(--toolbar-bg);
-            border-bottom: 1px solid var(--border);
-            padding: 0 24px;
-            height: 52px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-shrink: 0;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-        }
-        .sep {
-            width: 1px; height: 24px;
-            background: rgba(255,255,255,0.1);
-            margin: 0 8px;
-            flex-shrink: 0;
-        }
-        .tb-label {
-            font-size: 9px;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-right: 4px;
-            white-space: nowrap;
-        }
-        .tb-btn {
-            background: var(--btn-bg);
-            border: 1px solid transparent;
-            color: rgba(255,255,255,0.7);
-            padding: 0 14px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            white-space: nowrap;
-            transition: all 0.15s;
-            flex-shrink: 0;
-        }
-        .tb-btn:hover { background: var(--btn-hover); color: #fff; }
-        .tb-btn.active {
-            background: var(--accent);
-            color: #1a1a1a;
-            font-weight: 600;
-            border-color: transparent;
-        }
-        .tb-select {
-            background: var(--btn-bg);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: rgba(255,255,255,0.7);
-            padding: 0 10px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            outline: none;
-            flex-shrink: 0;
-        }
-        .tb-select option { background: #2a2a2a; }
+/* ── 노트 툴바 ── */
+#toolbar{position:relative;z-index:100;background:#111;border-bottom:1px solid rgba(255,255,255,0.08);padding:0 14px;height:52px;display:flex;align-items:center;gap:3px;flex-shrink:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;touch-action:pan-x;-webkit-overflow-scrolling:touch;}
+#toolbar::-webkit-scrollbar{display:none;}
+#toolbar.hidden{display:none !important;}
+.sep{width:1px;height:24px;background:rgba(255,255,255,0.08);margin:0 5px;flex-shrink:0;}
+.tb-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#666;margin-right:3px;white-space:nowrap;flex-shrink:0;}
+.tb-btn{background:rgba(255,255,255,0.06);border:1px solid transparent;color:rgba(255,255,255,0.65);padding:0 11px;height:30px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap;transition:all .15s;flex-shrink:0;}
+.tb-btn:hover{background:rgba(255,255,255,0.12);color:#fff;}
+.tb-btn.active{background:var(--accent);color:#111;font-weight:700;}
+.tb-back-btn{background:none;border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);padding:0 13px;height:30px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap;transition:all .15s;flex-shrink:0;}
+.tb-back-btn:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.tb-subject-badge{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--accent);white-space:nowrap;flex-shrink:0;letter-spacing:.04em;}
+.tb-select{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.7);padding:0 8px;height:30px;border-radius:6px;cursor:pointer;font-size:11px;outline:none;flex-shrink:0;}
+.tb-select option{background:#1a1a1a;}
+.clear-btn{background:rgba(220,80,60,0.12);border:1px solid rgba(220,80,60,0.18);color:#e05050;padding:0 11px;height:30px;border-radius:6px;cursor:pointer;font-size:12px;flex-shrink:0;transition:all .15s;white-space:nowrap;}
+.clear-btn:hover{background:rgba(220,80,60,0.22);}
+.palette{display:flex;gap:4px;align-items:center;flex-shrink:0;}
+.color-dot{width:19px;height:19px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0;}
+.color-dot:hover{transform:scale(1.15);}
+.color-dot.active{border-color:var(--accent);transform:scale(1.2);box-shadow:0 0 0 1px var(--accent);}
 
-        /* AI 버튼 */
-        .ai-btn {
-            background: var(--accent);
-            color: #1a1a1a;
-            border: none;
-            height: 34px;
-            padding: 0 18px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-            white-space: nowrap;
-            flex-shrink: 0;
-            transition: all 0.15s;
-            display: flex; align-items: center; gap: 6px;
-        }
-        .ai-btn:hover { background: var(--accent-dark); transform: translateY(-1px); }
-        .ai-btn:disabled { background: #444; color: #777; cursor: not-allowed; transform: none; }
+/* ── 탭 컨텐츠 ── */
+.tab-content{display:none;flex:1;overflow:hidden;flex-direction:column;position:relative;z-index:1;}
+.tab-content.active{display:flex;}
 
-        /* 색상 팔레트 */
-        .palette { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
-        .color-dot {
-            width: 22px; height: 22px; border-radius: 50%;
-            cursor: pointer; border: 2px solid transparent;
-            transition: all 0.15s; flex-shrink: 0;
-        }
-        .color-dot:hover { transform: scale(1.15); }
-        .color-dot.active { border-color: var(--accent); transform: scale(1.2); box-shadow: 0 0 0 1px var(--accent); }
+/* ══════════════════════════════════
+   노트 홈화면
+══════════════════════════════════ */
+#note-home{flex:1;overflow-y:auto;background:#0d0d0f;padding:28px 24px 100px;scrollbar-width:thin;scrollbar-color:rgba(124,58,237,.3) transparent;}
+.note-home-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
+.note-home-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--white);}
+.note-home-title span{color:var(--pl);}
+.note-subject-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;}
 
-        /* 지우개 크기 */
-        .size-indicator {
-            font-size: 11px; color: var(--text-muted);
-            padding: 0 6px; white-space: nowrap;
-        }
+.subject-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;transition:all .2s;animation:fadeUp .3s ease both;position:relative;}
+.subject-card:hover{border-color:rgba(124,58,237,.35);transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.35);}
+.subject-card.favorited{border-color:rgba(124,58,237,.6);box-shadow:0 0 16px rgba(124,58,237,.35),0 0 32px rgba(124,58,237,.15);}
+.sc-fab-row{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2;}
+.sc-fav-btn{background:rgba(0,0,0,0.45);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s;backdrop-filter:blur(4px);}
+.sc-fav-btn:hover{background:rgba(124,58,237,.6);}
+.sc-del-btn{background:rgba(0,0,0,0.45);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .2s;backdrop-filter:blur(4px);color:#fff;}
+.sc-del-btn:hover{background:rgba(244,63,94,.6);}
+.sc-preview{height:150px;background:#1a1a1e;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;transition:opacity .2s;}
+.sc-preview img{width:100%;height:100%;object-fit:cover;}
+.sc-preview-empty{color:rgba(255,255,255,0.08);font-size:38px;}
+.sc-info{padding:12px 14px;}
+.sc-subject{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:4px;color:var(--white);}
+.sc-meta{display:flex;justify-content:space-between;align-items:center;}
+.sc-date{font-size:11px;color:var(--w30);}
+.sc-count{font-size:11px;color:var(--pl);font-weight:600;}
 
-        /* 지우기 버튼 */
-        .clear-btn {
-            background: rgba(220, 80, 60, 0.15);
-            border: 1px solid rgba(220,80,60,0.2);
-            color: #e05050;
-            padding: 0 14px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            flex-shrink: 0;
-            transition: all 0.15s;
-            white-space: nowrap;
-        }
-        .clear-btn:hover { background: rgba(220,80,60,0.25); }
+/* 과목 카드 테마 */
+.sc-theme-math .sc-preview{background:linear-gradient(135deg,#0f0f1a,#180f30);}
+.sc-theme-math .sc-subject{color:#a78bfa;}
+.sc-theme-eng .sc-preview{background:linear-gradient(135deg,#0a1a12,#0d2018);}
+.sc-theme-eng .sc-subject{color:#34d399;}
+.sc-theme-sci .sc-preview{background:linear-gradient(135deg,#1a0f0f,#2a1010);}
+.sc-theme-sci .sc-subject{color:#f87171;}
+.sc-theme-kor .sc-preview{background:linear-gradient(135deg,#0f1218,#101520);}
+.sc-theme-kor .sc-subject{color:#60a5fa;}
+.sc-theme-other .sc-preview{background:linear-gradient(135deg,#111318,#131620);}
+.sc-theme-other .sc-subject{color:#94a3b8;}
 
-        /* ── 메인 영역 ── */
-        #main {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: auto;
-            touch-action: pan-x pan-y;
-        }
+/* FAB */
+#note-add-fab{position:fixed;bottom:28px;right:28px;z-index:50;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--purple),var(--pl));color:#fff;font-size:24px;cursor:pointer;box-shadow:0 4px 20px var(--pglow);transition:all .2s;display:flex;align-items:center;justify-content:center;}
+#note-add-fab:hover{transform:scale(1.08);box-shadow:0 6px 28px var(--pglow);}
+#note-add-fab.hidden{display:none !important;}
 
-        #main-inner {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 24px;
-            padding: 32px 400px 48px;
-            min-width: max-content;
-        }
+/* ══════════════════════════════════
+   노트 캔버스 화면
+══════════════════════════════════ */
+#note-canvas-view{flex:1;overflow:hidden;flex-direction:column;display:none;background:#1a1a1a;}
+#note-canvas-view.active{display:flex;}
+#note-main{flex:1;overflow-y:auto;overflow-x:auto;touch-action:pan-x pan-y;}
+#note-inner{display:flex;flex-direction:column;align-items:center;gap:20px;padding:28px 400px 40px;min-width:max-content;}
+#canvas-wrapper{position:relative;box-shadow:0 16px 48px rgba(0,0,0,0.5),0 4px 12px rgba(0,0,0,0.3);border-radius:2px;flex-shrink:0;}
+canvas#noteCanvas{display:block;background:#ffffff;cursor:crosshair;touch-action:none;border-radius:2px;}
+canvas#noteCanvas.eraser-mode{cursor:cell;}
+canvas#noteCanvas.texture-hanji{background-color:#f9f1de !important;}
+canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
+#zoom-indicator{position:fixed;bottom:16px;right:16px;background:rgba(20,20,20,0.92);color:var(--accent);padding:5px 12px;border-radius:16px;font-size:11px;font-weight:600;pointer-events:none;opacity:0;transition:opacity .3s;z-index:200;}
+#zoom-indicator.visible{opacity:1;}
 
-        /* 캔버스 */
-        #canvas-wrapper {
-            position: relative;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
-            border-radius: 2px;
-            flex-shrink: 0;
-        }
-        canvas {
-            display: block;
-            background: #ffffff;
-            cursor: crosshair;
-            touch-action: none;
-            border-radius: 2px;
-        }
-        canvas.eraser-mode { cursor: cell; }
+/* 문제 네비게이션 바 */
+#prob-nav{position:sticky;bottom:0;z-index:10;background:rgba(17,17,17,0.95);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,0.07);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.prob-nav-info{font-family:'Syne',sans-serif;font-size:12px;color:var(--w60);flex:1;}
+.prob-nav-info strong{color:var(--accent);}
+.prob-nav-btn{padding:7px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--white);font-size:12px;cursor:pointer;font-weight:600;transition:all .2s;white-space:nowrap;}
+.prob-nav-btn:hover{background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.2);}
+.prob-nav-btn.next{background:linear-gradient(135deg,var(--purple),var(--pl));border:none;color:#fff;box-shadow:0 0 12px var(--pglow);}
+.prob-nav-btn.next:hover{transform:translateY(-1px);box-shadow:0 2px 16px var(--pglow);}
 
-        /* 줌 인디케이터 */
-        #zoom-indicator {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(26,26,26,0.85);
-            color: var(--accent);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: 100;
-        }
-        #zoom-indicator.visible { opacity: 1; }
+/* ══════════════════════════════════
+   루틴 탭
+══════════════════════════════════ */
+#routine-main{flex:1;overflow-y:auto;padding:0;scrollbar-width:none;}
+#routine-main::-webkit-scrollbar{display:none;}
+#routine-inner{padding:28px 28px 100px;max-width:960px;margin:0 auto;width:100%;}
 
-        /* 질감 */
-        canvas.texture-hanji { background-color: #f9f1de; }
-        canvas.texture-kraft { background-color: #d9b97e; }
+/* 스탬프 배너 */
+#stamp-banner{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(168,85,247,.08));border:1px solid rgba(124,58,237,.2);border-radius:16px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .3s;overflow:hidden;position:relative;}
+#stamp-banner:hover{border-color:rgba(124,58,237,.4);}
+#stamp-banner.stamped{background:linear-gradient(135deg,rgba(34,211,160,.12),rgba(34,211,160,.05));border-color:rgba(34,211,160,.25);}
+.stamp-icon{font-size:28px;flex-shrink:0;transition:transform .4s cubic-bezier(.34,1.56,.64,1);}
+#stamp-banner.stamped .stamp-icon{transform:scale(1.15) rotate(-5deg);}
+.stamp-text{flex:1;}
+.stamp-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:2px;}
+.stamp-sub{font-size:12px;color:var(--w30);}
+.stamp-coin{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--pl);}
+#stamp-banner.stamped .stamp-coin{color:var(--green);}
 
-        /* ── AI 결과 ── */
-        #ai-result {
-            width: 842px;
-            background: var(--result-bg);
-            border: 1px solid var(--result-border);
-            border-radius: 10px;
-            padding: 24px 28px;
-        }
-        .result-label {
-            font-size: 10px;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .result-label::before {
-            content: '';
-            display: inline-block;
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: var(--accent);
-        }
-        #ai-text {
-            font-size: 15px;
-            line-height: 1.75;
-            color: rgba(255,255,255,0.75);
-            white-space: pre-wrap;
-            min-height: 48px;
-        }
-        #ai-text.placeholder { color: rgba(255,255,255,0.25); font-style: italic; }
-        #ai-text.loading { color: rgba(255,255,255,0.4); }
+.stitle{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--w30);margin-bottom:14px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.today-date-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--pl);margin-bottom:6px;}
+.today-big{font-family:'Syne',sans-serif;font-size:clamp(20px,3.5vw,32px);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:18px;}
+.today-big .dim{color:var(--w30);font-weight:400;}
+.prog-wrap{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:18px;}
+.prog-label{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--w30);white-space:nowrap;}
+.prog-bg{flex:1;height:5px;background:var(--w05);border-radius:100px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--purple),var(--pl));transition:width .6s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 10px var(--pglow);}
+.prog-pct{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:var(--pl);min-width:36px;text-align:right;}
 
-        /* 로딩 애니메이션 */
-        .dot-anim::after {
-            content: '';
-            animation: dots 1.2s infinite;
-        }
-        @keyframes dots {
-            0%   { content: ''; }
-            25%  { content: '.'; }
-            50%  { content: '..'; }
-            75%  { content: '...'; }
-            100% { content: ''; }
-        }
+.routine-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:15px 18px;margin-bottom:10px;animation:fadeUp .4s ease both;transition:border-color .2s;}
+.routine-card:hover{border-color:rgba(124,58,237,.15);}
+.rc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;}
+.rc-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;letter-spacing:-.01em;}
+.rc-steps{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.step-block{display:flex;align-items:center;gap:7px;background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;transition:all .2s;flex-shrink:0;}
+.step-block.done{border-color:var(--purple);background:var(--pdim);}
+.step-block.locked{opacity:.35;}
+.step-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot-min{background:var(--min-c);box-shadow:0 0 5px rgba(244,63,94,.4);}
+.dot-base{background:var(--base-c);box-shadow:0 0 5px rgba(245,158,11,.4);}
+.dot-bonus{background:var(--bonus-c);box-shadow:0 0 5px rgba(34,211,160,.4);}
+.step-text{font-size:12px;color:var(--w60);white-space:nowrap;}
+.step-block.done .step-text{color:var(--pl);}
+.step-block.locked .step-text{color:var(--w30);}
+.step-check{font-size:11px;color:var(--pl);}
+.step-arrow{color:var(--w10);font-size:11px;flex-shrink:0;}
 
-        /* 에러 */
-        #ai-text.error { color: #e05050; }
+.verify-btn{padding:5px 10px;border-radius:6px;border:1px solid var(--w10);background:var(--w05);color:var(--w30);font-size:11px;cursor:pointer;font-weight:500;white-space:nowrap;flex-shrink:0;transition:all .2s;font-family:'DM Sans',sans-serif;}
+.verify-btn:hover{border-color:var(--purple);color:var(--pl);}
+.verify-btn.done-v{border-color:rgba(34,211,160,.3);color:var(--green);cursor:default;}
+.verify-btn.loading-v{border-color:var(--purple);color:var(--pl);animation:vbpulse 1s infinite;}
+.verify-btn.cert-btn{border-color:rgba(124,58,237,.4);background:var(--pdim);color:var(--pl);font-weight:700;}
+.verify-btn.cert-btn:hover{background:rgba(124,58,237,.18);border-color:var(--purple);}
+@keyframes vbpulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-        /* 모델 선택 */
-        .model-badge {
-            font-size: 9px; letter-spacing: 0.08em;
-            background: rgba(232,197,71,0.15);
-            color: var(--accent);
-            padding: 2px 8px; border-radius: 4px;
-            border: 1px solid rgba(232,197,71,0.2);
-        }
-    </style>
+.empty-state{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:44px;text-align:center;color:var(--w30);font-size:14px;}
+.empty-state button{margin-top:14px;padding:10px 26px;border-radius:10px;border:1px solid rgba(124,58,237,.3);background:var(--pdim);color:var(--pl);cursor:pointer;font-size:13px;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.04em;transition:all .2s;}
+.empty-state button:hover{background:rgba(124,58,237,.15);}
+.edit-btn{display:flex;align-items:center;gap:5px;background:none;border:1px solid var(--border);color:var(--w30);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:11px;font-family:'Syne',sans-serif;font-weight:600;letter-spacing:.06em;transition:all .2s;}
+.edit-btn:hover{border-color:var(--purple);color:var(--pl);}
+
+.day-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.day-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 14px;aspect-ratio:1/1;display:flex;flex-direction:column;justify-content:space-between;transition:all .2s;position:relative;overflow:hidden;animation:fadeUp .4s ease both;}
+.day-card::before{content:'';position:absolute;inset:0;border-radius:16px;background:linear-gradient(135deg,rgba(124,58,237,.06),transparent 60%);opacity:0;transition:opacity .2s;}
+.day-card:hover::before{opacity:1;}
+.day-card:hover{border-color:rgba(124,58,237,.2);transform:translateY(-2px);}
+.day-card.is-today{border-color:rgba(124,58,237,.3);background:var(--surface2);}
+.day-card.is-today::before{opacity:1;}
+.dc-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.dc-date{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--w30);letter-spacing:.06em;}
+.dc-badge{font-size:8px;font-weight:700;letter-spacing:.1em;background:var(--pdim);color:var(--pl);border:1px solid rgba(124,58,237,.2);padding:2px 6px;border-radius:100px;text-transform:uppercase;}
+.dc-dots{display:flex;gap:3px;flex-wrap:wrap;margin:8px 0;}
+.dc-dot{width:11px;height:11px;border-radius:3px;}
+.dc-dot.d-min{background:rgba(244,63,94,.5);}
+.dc-dot.d-base{background:rgba(245,158,11,.5);}
+.dc-dot.d-bonus{background:rgba(34,211,160,.5);}
+.dc-dot.d-pending{background:var(--pdim);border:1px dashed rgba(124,58,237,.3);}
+.dc-dot.d-fail{background:var(--w05);border:1px solid var(--w10);}
+.dc-pct{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:-.02em;}
+.dc-pct.full{color:var(--green);}
+.dc-pct.partial{color:var(--pl);}
+.dc-pct.zero{color:var(--w30);}
+.dc-sub{font-size:10px;color:var(--w30);margin-top:2px;}
+
+/* ══════════════════════════════════
+   상점 탭
+══════════════════════════════════ */
+#shop-main{flex:1;overflow-y:auto;padding:28px 28px 100px;max-width:960px;margin:0 auto;width:100%;scrollbar-width:none;}
+#shop-main::-webkit-scrollbar{display:none;}
+.shop-balance{background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(168,85,247,.08));border:1px solid rgba(124,58,237,.25);border-radius:20px;padding:24px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;}
+.shop-balance-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--w30);margin-bottom:6px;}
+.shop-balance-num{font-family:'Syne',sans-serif;font-weight:800;font-size:36px;color:var(--pl);}
+.shop-balance-icon{font-size:48px;opacity:.6;}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+.shop-item{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;transition:all .2s;animation:fadeUp .4s ease both;}
+.shop-item:hover{border-color:rgba(124,58,237,.25);transform:translateY(-2px);}
+.shop-item-icon{font-size:32px;margin-bottom:12px;}
+.shop-item-name{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:6px;}
+.shop-item-desc{font-size:12px;color:var(--w30);line-height:1.5;margin-bottom:14px;}
+.shop-item-price{display:flex;align-items:center;justify-content:space-between;}
+.shop-item-cost{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--pl);}
+.shop-buy-btn{padding:8px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--purple),var(--pl));color:#fff;cursor:pointer;font-size:12px;font-weight:700;font-family:'Syne',sans-serif;transition:all .2s;}
+.shop-buy-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px var(--pglow);}
+.shop-buy-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+/* ══════════════════════════════════
+   설정 시트
+══════════════════════════════════ */
+#setup-screen{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);display:flex;align-items:flex-end;justify-content:center;}
+.setup-sheet{background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:24px 24px 0 0;padding:22px 20px 50px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ssu{animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--w10);margin:0 auto 20px;}
+.sheet-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:4px;letter-spacing:-.02em;}
+.sheet-sub{font-size:13px;color:var(--w30);margin-bottom:22px;}
+.existing-routines{margin-bottom:18px;}
+.er-item{display:flex;align-items:center;gap:8px;background:var(--surface3);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:7px;}
+.er-name{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;flex:1;}
+.er-steps{display:flex;gap:4px;flex-wrap:wrap;}
+.er-step{font-size:11px;padding:2px 7px;border-radius:5px;border:1px solid var(--border);color:var(--w30);}
+.er-step.s-min{border-color:rgba(244,63,94,.3);color:var(--min-c);}
+.er-step.s-base{border-color:rgba(245,158,11,.3);color:var(--base-c);}
+.er-step.s-bonus{border-color:rgba(34,211,160,.3);color:var(--bonus-c);}
+.er-del{background:none;border:none;cursor:pointer;color:var(--w10);font-size:15px;line-height:1;padding:0 2px;transition:color .15s;flex-shrink:0;}
+.er-del:hover{color:var(--red);}
+.add-form{background:var(--surface3);border:1px solid var(--border);border-radius:16px;padding:16px;}
+.add-form-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--w30);margin-bottom:14px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--w30);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;font-family:'Syne',sans-serif;}
+.field input,.field select{width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:13px;outline:none;font-family:'DM Sans',sans-serif;transition:border .2s;}
+.field input:focus,.field select:focus{border-color:var(--purple);}
+.field input::placeholder{color:var(--w30);}
+.grade-inputs{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.grade-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+.grade-badge{font-size:11px;font-weight:700;font-family:'Syne',sans-serif;white-space:nowrap;min-width:48px;}
+.gb-min{color:var(--min-c);} .gb-base{color:var(--base-c);} .gb-bonus{color:var(--bonus-c);}
+.grade-row input{flex:1;padding:5px 9px;background:var(--surface3);border:1px solid var(--border);border-radius:7px;color:var(--white);font-size:12px;outline:none;font-family:'DM Sans',sans-serif;transition:border .2s;}
+.grade-row input:focus{border-color:var(--purple);}
+.grade-row input::placeholder{color:var(--w30);}
+.add-routine-btn{width:100%;padding:10px;border-radius:10px;border:1px dashed rgba(255,255,255,.09);background:none;color:var(--w30);font-size:13px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;margin-top:3px;}
+.add-routine-btn:hover{border-color:var(--purple);color:var(--pl);background:var(--pdim);}
+.sheet-actions{display:flex;gap:10px;margin-top:18px;}
+.btn-cancel{flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--surface3);color:var(--w30);cursor:pointer;font-size:14px;font-weight:600;font-family:'Syne',sans-serif;transition:all .2s;}
+.btn-cancel:hover{color:var(--w60);}
+.btn-confirm{flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--purple),var(--pl));color:#fff;cursor:pointer;font-size:14px;font-weight:700;font-family:'Syne',sans-serif;letter-spacing:.04em;box-shadow:0 0 18px var(--pglow);transition:all .2s;}
+.btn-confirm:hover{transform:translateY(-1px);box-shadow:0 4px 22px var(--pglow);}
+
+/* 과목 선택 모달 */
+#subject-modal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);display:none;align-items:flex-end;justify-content:center;}
+#subject-modal.open{display:flex;}
+.subject-sheet{background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:24px 24px 0 0;padding:22px 20px 44px;width:100%;max-width:460px;animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);}
+.subject-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;}
+.subject-choice-btn{padding:16px 10px;border-radius:14px;border:1px solid var(--border);background:var(--surface3);cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;text-align:center;transition:all .2s;display:flex;flex-direction:column;gap:7px;align-items:center;color:var(--white);}
+.subject-choice-btn:hover{border-color:var(--purple);background:var(--pdim);color:var(--pl);}
+.subject-choice-btn span{font-size:26px;}
+
+/* 인증방식 선택 모달 */
+#verify-method-modal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);display:none !important;align-items:flex-end;justify-content:center;}
+#verify-method-modal.open{display:flex !important;}
+.verify-method-sheet{background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:24px 24px 0 0;padding:22px 20px 44px;width:100%;max-width:460px;animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);}
+.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.method-btn{padding:20px 12px;border-radius:14px;border:1px solid var(--border);background:var(--surface3);cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;text-align:center;transition:all .2s;display:flex;flex-direction:column;gap:8px;align-items:center;color:var(--white);}
+.method-btn:hover{border-color:var(--purple);background:var(--pdim);color:var(--pl);}
+.method-btn span{font-size:28px;}
+
+/* 도형 선택 패널 */
+#shape-panel{display:none;position:absolute;top:52px;left:0;right:0;background:#111;border-bottom:1px solid rgba(255,255,255,0.08);padding:10px 14px;z-index:50;flex-wrap:wrap;gap:8px;}
+#shape-panel.open{display:flex;}
+.shape-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:var(--w60);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;transition:all .15s;}
+.shape-btn:hover{background:rgba(255,255,255,0.12);color:#fff;}
+.shape-btn.active{background:var(--pdim);border-color:var(--purple);color:var(--pl);}
+
+/* 결과 모달 */
+#cert-modal{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;}
+#cert-modal.open{display:flex;}
+.cert-box{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:28px;max-width:420px;width:90%;animation:fadeUp .3s ease;}
+.cert-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:8px;}
+.cert-body{font-size:13px;color:var(--w60);line-height:1.65;margin-bottom:18px;white-space:pre-wrap;}
+.cert-close{width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--purple),var(--pl));color:#fff;cursor:pointer;font-size:14px;font-weight:700;font-family:'Syne',sans-serif;}
+
+/* 파일인풋 */
+#verify-file-input{display:none;}
+
+/* 토스트 */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,20,26,0.96);border:1px solid var(--border);color:var(--white);padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;pointer-events:none;opacity:0;transition:all .3s;z-index:500;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
 </head>
 <body>
 
+<canvas id="stars"></canvas>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- 헤더 -->
 <div id="header">
-    <div class="header-logo">
-        S-Sketch AI
-        <span>Gemini Multimodal</span>
-    </div>
-    <div class="api-wrap">
-        <span class="api-label">API Key</span>
-        <input type="password" id="api-key" class="api-input" placeholder="Gemini API Key를 입력하세요">
+    <div class="logo">AXIS <sub>STUDY OS</sub></div>
+    <div class="header-right">
+        <div class="coin-pill">✦ <span id="coin-num">0</span></div>
+        <div id="pin-display" onclick="showPinInfo()">PIN: <span id="pin-num">----</span></div>
+        <button class="hdr-btn" onclick="openPromptSettings()">프롬프트</button>
+        <select id="model-sel" style="background:var(--surface3);border:1px solid var(--border);color:var(--w60);padding:6px 10px;border-radius:8px;font-size:12px;outline:none;flex-shrink:0;" onchange="LS.s('axis_model',this.value)">
+            <option value="gpt-5-mini-2025-08-07">GPT-5 mini</option>
+            <option value="gpt-4.1-mini">GPT-4.1 mini</option>
+        </select>
+        <div class="api-wrap">
+            <input class="api-inp" type="password" id="api-key" placeholder="OpenAI API Key" onchange="saveApiKey()">
+            <button class="api-test-btn" onclick="testApiKey()">테스트</button>
+        </div>
     </div>
 </div>
 
-<div id="toolbar">
+<!-- 탭 네비게이션 -->
+<div id="tab-nav">
+    <button class="tab-btn" onclick="switchTab('routine')">✅ 루틴</button>
+    <button class="tab-btn active" onclick="switchTab('note')">📝 노트</button>
+    <button class="tab-btn" onclick="switchTab('shop')">🏪 상점</button>
+</div>
 
-    <button id="btn-read-ai" class="ai-btn" onclick="readNoteWithAI()">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/>
-        </svg>
-        노트 읽어오기
-    </button>
-
+<!-- 노트 툴바 -->
+<div id="toolbar" class="hidden" style="position:relative;">
+    <button class="tb-back-btn" onclick="goNoteHome()">← 홈</button>
+    <span class="tb-subject-badge" id="toolbar-subject-name"></span>
     <div class="sep"></div>
-
     <span class="tb-label">Pen</span>
     <button id="btn-ballpen" class="tb-btn active" onclick="setPen('ballpen')">볼펜</button>
     <button id="btn-pencil" class="tb-btn" onclick="setPen('pencil')">연필</button>
     <button id="btn-highlighter" class="tb-btn" onclick="setPen('highlighter')">형광펜</button>
     <button id="btn-eraser" class="tb-btn" onclick="setPen('eraser')">지우개</button>
-
+    <button id="btn-shape" class="tb-btn" onclick="toggleShapePanel()">도형 ▾</button>
     <div class="sep"></div>
-
     <span class="tb-label">Color</span>
     <div class="palette" id="palette"></div>
-
     <div class="sep"></div>
-
-    <span class="tb-label">Template</span>
-    <select class="tb-select" onchange="changeTemplate(this.value)">
+    <span class="tb-label">배경</span>
+    <select class="tb-select" id="template-select" onchange="changeTemplate(this.value)">
         <option value="blank">빈 종이</option>
         <option value="ruled">줄노트</option>
         <option value="grid">모눈종이</option>
         <option value="dot">도트</option>
     </select>
-
-    <div class="sep"></div>
-
-    <span class="tb-label">재질</span>
     <select class="tb-select" onchange="changeTexture(this.value)">
         <option value="">일반</option>
         <option value="hanji">한지</option>
         <option value="kraft">크라프트</option>
     </select>
-
     <div class="sep"></div>
+    <button class="clear-btn" onclick="clearCanvas()">삭제</button>
 
-    <select class="tb-select" id="model-select">
-        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-    </select>
-
-    <div class="sep"></div>
-
-    <button class="clear-btn" onclick="clearCanvas()">전체 삭제</button>
+    <!-- 도형 패널 -->
+    <div id="shape-panel">
+        <button class="shape-btn" onclick="selectShape('line')">― 직선</button>
+        <button class="shape-btn" onclick="selectShape('rect')">□ 사각형</button>
+        <button class="shape-btn" onclick="selectShape('circle')">○ 원</button>
+        <button class="shape-btn" onclick="selectShape('arrow')">→ 화살표</button>
+        <button class="shape-btn" onclick="selectShape('triangle')">△ 삼각형</button>
+        <button class="shape-btn" data-off onclick="cancelShape()">✕ 취소</button>
+    </div>
 </div>
 
 <div id="zoom-indicator">100%</div>
+<div id="toast"></div>
 
-<div id="main">
-  <div id="main-inner">
-    <div id="canvas-wrapper">
-        <canvas id="noteCanvas" width="842" height="1100"></canvas>
+<!-- 노트 탭 -->
+<div id="tab-note" class="tab-content active">
+    <div id="note-home">
+        <div class="note-home-header">
+            <div class="note-home-title">내 노트 <span>📚</span></div>
+            <div style="font-size:11px;color:var(--w30);" id="total-note-count">과목 0개</div>
+        </div>
+        <div class="note-subject-grid" id="subject-grid"></div>
     </div>
+    <div id="note-canvas-view">
+        <div id="note-main">
+            <div id="note-inner">
+                <div id="canvas-wrapper">
+                    <canvas id="noteCanvas" width="842" height="1100"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- 문제 네비게이션 바 -->
+        <div id="prob-nav">
+            <button class="prob-nav-btn" onclick="prevProblem()">◂</button>
+            <div style="flex:1;display:flex;justify-content:center;align-items:center;">
+                <input id="prob-num-input" type="text" inputmode="numeric"
+                    value="1"
+                    onblur="jumpToProblem(this.value)"
+                    onkeydown="if(event.key==='Enter'){this.blur();}"
+                    style="width:64px;text-align:center;font-family:'Syne',sans-serif;font-weight:800;font-size:22px;
+                    background:none;border:none;border-bottom:2px solid rgba(255,255,255,0.15);
+                    color:var(--white);outline:none;padding:2px 4px;cursor:pointer;transition:border-color .2s;"
+                    onfocus="this.select();this.style.borderColor='var(--pl)'"
+                    onblur2="this.style.borderColor='rgba(255,255,255,0.15)'">
+                <span style="font-family:'Syne',sans-serif;font-size:14px;color:var(--w30);margin-left:6px;">/ <span id="prob-total">1</span></span>
+            </div>
+            <button class="prob-nav-btn next" onclick="nextProblem()">▸</button>
+            <button onclick="deleteCurrentProblem()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(244,63,94,0.3);background:rgba(244,63,94,0.08);color:#f43f5e;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap;" onmouseover="this.style.background='rgba(244,63,94,0.18)'" onmouseout="this.style.background='rgba(244,63,94,0.08)'">🗑 삭제</button>
+            <button onclick="saveImageToDevice()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(34,211,160,0.3);background:rgba(34,211,160,0.08);color:#22d3a0;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap;" onmouseover="this.style.background='rgba(34,211,160,0.18)'" onmouseout="this.style.background='rgba(34,211,160,0.08)'">💾 저장</button>
+        </div>
+    </div>
+</div>
 
-    <div id="ai-result">
-        <div class="result-label">AI 인식 결과</div>
-        <div id="ai-text" class="placeholder">위 버튼을 눌러 AI가 노트를 읽게 하세요.</div>
+<!-- 루틴 탭 -->
+<div id="tab-routine" class="tab-content">
+    <div id="routine-main">
+        <div id="routine-inner">
+            <!-- 스탬프 배너 -->
+            <div id="stamp-banner" onclick="doStamp()">
+                <div class="stamp-icon">🗓️</div>
+                <div class="stamp-text">
+                    <div class="stamp-title" id="stamp-title">오늘의 출석 체크</div>
+                    <div class="stamp-sub" id="stamp-sub">탭해서 출석 도장 찍기 → +3코인</div>
+                </div>
+                <div class="stamp-coin" id="stamp-coin">+3 ✦</div>
+            </div>
+            <div id="today-section" style="animation:fadeUp .5s ease both;">
+                <div class="today-date-label" id="today-label-str"></div>
+                <div class="today-big">오늘의 루틴<br><span class="dim" id="today-sub-str"></span></div>
+                <div class="prog-wrap">
+                    <div class="prog-label">PROGRESS</div>
+                    <div class="prog-bg"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+                    <div class="prog-pct" id="prog-pct">0%</div>
+                </div>
+                <div id="coin-preview" style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 18px;margin-bottom:18px;">
+                    <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--w30);">자정 정산 예정</div>
+                    <div id="coin-preview-val" style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;">—</div>
+                </div>
+                <div id="checklist-wrap"></div>
+            </div>
+            <div style="height:32px"></div>
+            <div id="history-section" style="animation:fadeUp .5s .1s ease both;">
+                <div class="stitle">ALL DAYS</div>
+                <div class="day-grid" id="day-grid"></div>
+            </div>
+        </div>
     </div>
-  </div>
+</div>
+
+<!-- 상점 탭 -->
+<div id="tab-shop" class="tab-content">
+    <div id="shop-main">
+        <div class="shop-balance">
+            <div>
+                <div class="shop-balance-label">보유 코인</div>
+                <div class="shop-balance-num">✦ <span id="shop-coin-num">0</span></div>
+            </div>
+            <div class="shop-balance-icon">🏪</div>
+        </div>
+        <div class="stitle">아이템</div>
+        <div class="shop-grid" id="shop-grid">
+            <!-- JS 렌더 -->
+        </div>
+    </div>
+</div>
+
+<!-- FAB -->
+<button id="note-add-fab" onclick="openSubjectModal()">＋</button>
+
+<!-- 루틴 설정 시트 -->
+<div id="setup-screen" style="display:none;">
+    <div class="setup-sheet ssu">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">루틴 블럭 설정</div>
+        <div class="sheet-sub">최소→기본→보너스 순서로 단계가 진행돼요. 입시 2개 이상, 건강 1개 이상 필수.</div>
+        <div class="existing-routines" id="existing-routines"></div>
+        <div class="add-form">
+            <div class="add-form-title">새 루틴 추가</div>
+            <div class="field">
+                <label>카테고리</label>
+                <select id="inp-category">
+                    <option value="입시">📚 입시</option>
+                    <option value="건강">💪 건강</option>
+                    <option value="서브스킬">⚡ 서브스킬</option>
+                    <option value="기타">✦ 기타</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>루틴 이름</label>
+                <input type="text" id="inp-name" placeholder="예) 수학, 영어, 달리기...">
+            </div>
+            <div class="field">
+                <label>등급별 목표</label>
+                <div class="grade-inputs">
+                    <div class="grade-row"><span class="grade-badge gb-min">🔴 최소</span><input type="text" id="inp-min" placeholder="예) 5문제, 15분..."></div>
+                    <div class="grade-row"><span class="grade-badge gb-base">🟡 기본</span><input type="text" id="inp-base" placeholder="예) 10문제, 30분..."></div>
+                    <div class="grade-row"><span class="grade-badge gb-bonus">🟢 보너스</span><input type="text" id="inp-bonus" placeholder="예) 30문제, 1시간..."></div>
+                </div>
+            </div>
+            <button class="add-routine-btn" onclick="addRoutineItem()">＋ 루틴 추가</button>
+        </div>
+        <div class="sheet-actions">
+            <button class="btn-cancel" onclick="closeSetup()">닫기</button>
+            <button class="btn-confirm" onclick="saveSetup()">설정 완료</button>
+        </div>
+    </div>
+</div>
+
+<!-- 과목 선택 모달 -->
+<div id="subject-modal">
+    <div class="subject-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">과목 선택</div>
+        <div class="sheet-sub">어떤 과목의 노트를 작성할까요?</div>
+        <div class="subject-grid" id="subject-choice-grid"></div>
+        <div style="margin-top:12px;">
+            <button class="btn-cancel" onclick="closeSubjectModal()" style="width:100%;">취소</button>
+        </div>
+    </div>
+</div>
+
+<!-- 인증 방식 선택 모달 (입시 카테고리용) -->
+<div id="verify-method-modal">
+    <div class="verify-method-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" id="vm-title">인증 방식 선택</div>
+        <div class="sheet-sub" id="vm-sub">노트 참고 또는 사진 첨부 중 선택하세요</div>
+        <div class="method-grid">
+            <button class="method-btn" onclick="verifyByNote()">
+                <span>📝</span>노트 참고<div style="font-size:10px;color:var(--w30);font-weight:400;margin-top:2px;">앱 내 노트로 검사</div>
+            </button>
+            <button class="method-btn" onclick="verifyByPhoto()">
+                <span>📷</span>사진 첨부<div style="font-size:10px;color:var(--w30);font-weight:400;margin-top:2px;">PIN 포함 사진 업로드</div>
+            </button>
+        </div>
+        <div style="margin-top:12px;">
+            <button class="btn-cancel" onclick="closeVerifyMethodModal()" style="width:100%;">취소</button>
+        </div>
+    </div>
+</div>
+
+<!-- 결과 모달 -->
+<div id="cert-modal">
+    <div class="cert-box">
+        <div class="cert-title" id="cert-title"></div>
+        <div class="cert-body" id="cert-body"></div>
+        <button class="cert-close" onclick="closeCertModal()">확인</button>
+    </div>
+</div>
+
+<!-- 파일 인풋 -->
+<input type="file" id="verify-file-input" accept="image/*" style="display:none;" onchange="handlePhotoVerify(event)">
+
+<!-- 커스텀 Confirm 모달 -->
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);z-index:500;align-items:center;justify-content:center;">
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:28px 24px;max-width:340px;width:90%;animation:fadeUp .25s ease;">
+        <div id="confirm-title" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:10px;letter-spacing:-.01em;"></div>
+        <div id="confirm-body" style="font-size:13px;color:var(--w60);line-height:1.6;margin-bottom:22px;"></div>
+        <div style="display:flex;gap:10px;">
+            <button id="confirm-cancel" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:var(--surface3);color:var(--w30);cursor:pointer;font-size:13px;font-weight:600;font-family:'Syne',sans-serif;">취소</button>
+            <button id="confirm-ok" style="flex:2;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--purple),var(--pl));color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;box-shadow:0 0 14px var(--pglow);">확인</button>
+        </div>
+    </div>
+</div>
+
+<!-- 프롬프트 설정 모달 -->
+<div id="prompt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);z-index:300;align-items:flex-end;justify-content:center;">
+    <div style="background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:24px 24px 0 0;padding:24px 20px 48px;width:100%;max-width:540px;max-height:88vh;overflow-y:auto;animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);">
+        <div style="width:36px;height:4px;border-radius:2px;background:var(--w10);margin:0 auto 20px;"></div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:5px;">프롬프트 설정</div>
+        <div style="font-size:13px;color:var(--w30);margin-bottom:20px;">루틴 이름별로 AI 판단 기준을 추가할 수 있어요.</div>
+        <div style="background:var(--surface3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:18px;">
+            <div style="font-size:10px;font-weight:700;color:var(--w30);letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px;font-family:'Syne',sans-serif;">기본 프롬프트 — 노트 인증 (수정 가능)</div>
+            <textarea id="base-prompt-note-edit" style="width:100%;min-height:130px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--w60);font-size:11px;outline:none;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.6;"></textarea>
+        </div>
+        <div style="background:var(--surface3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:18px;">
+            <div style="font-size:10px;font-weight:700;color:var(--w30);letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px;font-family:'Syne',sans-serif;">기본 프롬프트 — 사진 인증 (수정 가능)</div>
+            <textarea id="base-prompt-photo-edit" style="width:100%;min-height:130px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--w60);font-size:11px;outline:none;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.6;"></textarea>
+        </div>
+        <div id="prompt-fields"></div>
+        <div style="display:flex;gap:10px;margin-top:18px;">
+            <button onclick="closePromptSettings()" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--surface3);color:var(--w30);cursor:pointer;font-size:13px;font-weight:600;font-family:'Syne',sans-serif;">닫기</button>
+            <button onclick="savePromptSettings()" style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--purple),var(--pl));color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;letter-spacing:.04em;box-shadow:0 0 18px var(--pglow);">저장</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    const canvas = document.getElementById('noteCanvas');
-    const ctx = canvas.getContext('2d');
-    const aiText = document.getElementById('ai-text');
-    const aiBtn = document.getElementById('btn-read-ai');
+'use strict';
 
-    let isDrawing = false;
-    let lastX = 0, lastY = 0;
-    let currentPen = 'ballpen';
-    let currentColor = '#1a1a1a';
-    let currentTemplate = 'blank';
-
-    // ── 줌/패닝 상태 ──
-    let currentScale = 1.0;
-    const MIN_SCALE = 0.3, MAX_SCALE = 4.0;
-    let targetScale = 1.0;
-    let animFrame = null;
-
-    // 드로잉 상태
-    let isPenDrawing = false;
-
-    // 패닝 상태 (손가락 1개)
-    let isPanning = false;
-    let panLastX = 0, panLastY = 0;
-    let panPointerId = null;
-
-    // 핀치 상태 (손가락 2개) - pointer 이벤트로 관리
-    let touchPointers = new Map(); // pointerId → {x, y}
-    let pinchStartDist = 0;
-    let pinchStartScale = 1.0;
-    let pinchStartScrollX = 0;
-    let pinchStartScrollY = 0;
-    let pinchStartMidX = 0;
-    let pinchStartMidY = 0;
-
-    const mainEl = document.getElementById('main');
-    const zoomIndicator = document.getElementById('zoom-indicator');
-    let zoomTimeout = null;
-
-    function showZoom() {
-        zoomIndicator.textContent = Math.round(currentScale * 100) + '%';
-        zoomIndicator.classList.add('visible');
-        clearTimeout(zoomTimeout);
-        zoomTimeout = setTimeout(() => zoomIndicator.classList.remove('visible'), 1200);
-    }
-
-    function applyScale() {
-        const w = Math.round(842 * currentScale);
-        const h = Math.round(1100 * currentScale);
-        canvas.style.width = w + 'px';
-        canvas.style.height = h + 'px';
-        showZoom();
-    }
-
-    // 부드러운 줌 (이징)
-    function smoothZoomTo(target) {
-        targetScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, target));
-        if (animFrame) return;
-        function step() {
-            const diff = targetScale - currentScale;
-            if (Math.abs(diff) < 0.002) {
-                currentScale = targetScale;
-                applyScale();
-                animFrame = null;
-                return;
+/* ══════════════════════════════════════════════════════════════
+   IndexedDB
+══════════════════════════════════════════════════════════════ */
+let db = null;
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open('axis_study_os_v2', 2);
+        req.onupgradeneeded = e => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains('pages')) {
+                const s = d.createObjectStore('pages', {keyPath:'id'});
+                s.createIndex('subject','subject',{unique:false});
             }
-            currentScale += diff * 0.22;
-            applyScale();
-            animFrame = requestAnimationFrame(step);
+        };
+        req.onsuccess = e => { db = e.target.result; resolve(); };
+        req.onerror = () => reject(req.error);
+    });
+}
+const dbPut = (store, obj) => new Promise((res,rej) => { const tx=db.transaction(store,'readwrite'); const r=tx.objectStore(store).put(obj); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+const dbGet = (store, key) => new Promise((res,rej) => { const tx=db.transaction(store,'readonly'); const r=tx.objectStore(store).get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+const dbGetByIndex = (store, idx, val) => new Promise((res,rej) => { const tx=db.transaction(store,'readonly'); const r=tx.objectStore(store).index(idx).getAll(val); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+const dbDelete = (store, key) => new Promise((res,rej) => { const tx=db.transaction(store,'readwrite'); const r=tx.objectStore(store).delete(key); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); });
+const dbGetAll = (store) => new Promise((res,rej) => { const tx=db.transaction(store,'readonly'); const r=tx.objectStore(store).getAll(); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+
+/* ══════════════════════════════════════════════════════════════
+   localStorage 헬퍼
+══════════════════════════════════════════════════════════════ */
+const LS = {
+    g:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d;}catch{return d;}},
+    s:(k,v)=>localStorage.setItem(k,JSON.stringify(v))
+};
+
+/* ══════════════════════════════════════════════════════════════
+   커스텀 Confirm
+══════════════════════════════════════════════════════════════ */
+function showConfirm(title, body){
+    return new Promise(resolve=>{
+        const modal=document.getElementById('confirm-modal');
+        document.getElementById('confirm-title').textContent=title;
+        document.getElementById('confirm-body').textContent=body;
+        modal.style.display='flex';
+        const ok=document.getElementById('confirm-ok');
+        const cancel=document.getElementById('confirm-cancel');
+        const cleanup=(result)=>{
+            modal.style.display='none';
+            ok.replaceWith(ok.cloneNode(true));
+            cancel.replaceWith(cancel.cloneNode(true));
+            resolve(result);
+        };
+        document.getElementById('confirm-ok').onclick=()=>cleanup(true);
+        document.getElementById('confirm-cancel').onclick=()=>cleanup(false);
+    });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   토스트
+══════════════════════════════════════════════════════════════ */
+let toastTimer=null;
+function showToast(msg,dur=2200){
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   API 키 저장 & 테스트
+══════════════════════════════════════════════════════════════ */
+function saveApiKey(){
+    LS.s('axis_api_key', document.getElementById('api-key').value);
+}
+async function testApiKey(){
+    const key = document.getElementById('api-key').value.trim();
+    if (!key){showToast('API Key를 먼저 입력해주세요!');return;}
+    showToast('⏳ API 연결 테스트 중...',5000);
+    try{
+        const model=LS.g('axis_model','gpt-5-mini-2025-08-07');
+        const resp = await fetch(`https://api.openai.com/v1/chat/completions`,
+            {method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+             body:JSON.stringify({model,messages:[{role:'user',content:'안녕! 한 단어로만 답해줘.'}],max_completion_tokens:2000})});
+        const data = await resp.json();
+        if(data.choices?.[0]?.message){
+            showToast(`✅ API 연결 성공! ${model} 응답했어요.`,3000);
+            LS.s('axis_api_key',key);
+        } else {
+            showToast('❌ 응답 없음 — API Key를 확인해주세요.',3500);
         }
-        animFrame = requestAnimationFrame(step);
+    }catch(err){showToast('❌ 오류: '+err.message,3500);}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   탭 전환
+══════════════════════════════════════════════════════════════ */
+function switchTab(tab){
+    document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+    document.getElementById('tab-'+tab).classList.add('active');
+    document.querySelector('.tab-btn[onclick="switchTab(\''+tab+'\')"]').classList.add('active');
+    if(tab==='note'){
+        document.body.classList.add('note-active');
+        showNoteHome();
+    } else {
+        document.body.classList.remove('note-active');
+        document.getElementById('toolbar').classList.add('hidden');
+        document.getElementById('note-add-fab').classList.add('hidden');
     }
+    if(tab==='routine'){checkSettle().then(()=>render());}
+    if(tab==='shop'){renderShop();}
+}
 
-    function getPointerDist(p1, p2) {
-        const dx = p1.x - p2.x;
-        const dy = p1.y - p2.y;
-        return Math.sqrt(dx * dx + dy * dy);
+/* ══════════════════════════════════════════════════════════════
+   과목 정의
+══════════════════════════════════════════════════════════════ */
+const SUBJECTS = [
+    {name:'수학', theme:'math',  emoji:'📐', color:'#a78bfa'},
+    {name:'영어', theme:'eng',   emoji:'📖', color:'#34d399'},
+    {name:'과탐', theme:'sci',   emoji:'🔬', color:'#f87171'},
+    {name:'국어', theme:'kor',   emoji:'✏️',  color:'#60a5fa'},
+    {name:'사탐', theme:'other', emoji:'🌍', color:'#94a3b8'},
+    {name:'기타', theme:'other', emoji:'📝', color:'#94a3b8'},
+];
+const subjectInfo = name => SUBJECTS.find(s=>s.name===name) || SUBJECTS[SUBJECTS.length-1];
+
+/* ══════════════════════════════════════════════════════════════
+   노트 홈화면
+══════════════════════════════════════════════════════════════ */
+async function showNoteHome(){
+    document.getElementById('note-home').style.display='block';
+    document.getElementById('note-canvas-view').classList.remove('active');
+    document.getElementById('toolbar').classList.add('hidden');
+    document.getElementById('note-add-fab').classList.remove('hidden');
+    await refreshNoteHome();
+}
+
+async function refreshNoteHome(){
+    const allPages = await dbGetAll('pages');
+    const favorites = LS.g('axis_favorites', []);
+    // 과목별 집계: {count(페이지), probCount(문제), preview, lastSaved}
+    const map = {};
+    allPages.forEach(p=>{
+        if(!map[p.subject]) map[p.subject]={pageCount:0,probSet:new Set(),preview:null,lastSaved:0};
+        map[p.subject].pageCount++;
+        map[p.subject].probSet.add(p.probIdx??0);
+        if(p.savedAt>map[p.subject].lastSaved){
+            map[p.subject].lastSaved=p.savedAt;
+            map[p.subject].preview=p.dataURL;
+        }
+    });
+    // 즐겨찾기 먼저 정렬
+    let subjects = Object.keys(map);
+    subjects.sort((a,b)=>{
+        const fa=favorites.includes(a)?0:1;
+        const fb=favorites.includes(b)?0:1;
+        return fa-fb;
+    });
+    document.getElementById('total-note-count').textContent='과목 '+subjects.length+'개';
+    const grid = document.getElementById('subject-grid');
+    if(subjects.length===0){
+        grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:56px 0;color:var(--w30);font-size:13px;">아직 노트가 없어요.<br>아래 + 버튼을 눌러 시작하세요!</div>';
+        return;
     }
+    grid.innerHTML=subjects.map((sub,i)=>{
+        const inf=subjectInfo(sub);
+        const d=map[sub];
+        const isFav=favorites.includes(sub);
+        const probCount=d.probSet.size;
+        const preview=d.preview?`<img src="${d.preview}" alt="preview">`:'<div class="sc-preview-empty">'+inf.emoji+'</div>';
+        const date=new Date(d.lastSaved).toLocaleDateString('ko-KR',{month:'short',day:'numeric'});
+        return `<div class="subject-card sc-theme-${inf.theme}${isFav?' favorited':''}" style="animation-delay:${i*.05}s">
+            <div class="sc-fab-row">
+                <button class="sc-fav-btn" onclick="toggleFavorite('${sub}')" title="즐겨찾기">${isFav?'⭐':'☆'}</button>
+                <button class="sc-del-btn" onclick="deleteSubject('${sub}')" title="삭제">🗑</button>
+            </div>
+            <div class="sc-preview" onclick="openSubject('${sub}')">${preview}</div>
+            <div class="sc-info">
+                <div class="sc-subject" onclick="openSubject('${sub}')">${inf.emoji} ${sub}</div>
+                <div class="sc-meta">
+                    <div class="sc-date">${date}</div>
+                    <div class="sc-count">${probCount}문제</div>
+                </div>
+            </div></div>`;
+    }).join('');
+}
 
-    // 배경 레이어 (별도 캔버스로 분리 — 핵심 버그 수정)
-    const bgCanvas = document.createElement('canvas');
-    bgCanvas.width = 842; bgCanvas.height = 1100;
-    const bgCtx = bgCanvas.getContext('2d');
+function openSubjectModal(){
+    const grid=document.getElementById('subject-choice-grid');
+    grid.innerHTML=SUBJECTS.map(s=>`<button class="subject-choice-btn" onclick="startNewNote('${s.name}')"><span>${s.emoji}</span>${s.name}</button>`).join('');
+    document.getElementById('subject-modal').classList.add('open');
+}
+function closeSubjectModal(){document.getElementById('subject-modal').classList.remove('open');}
 
-    const COLORS = [
-        '#1a1a1a','#e8344a','#1a6fc4','#2a9d60','#e07b20',
-        '#8b3fc8','#c4a030','#5a9fbf',
-        '#fbbdbd','#bdd6f8','#b8edcc','#fff0b8'
-    ];
+async function startNewNote(subject){
+    // 이미 존재하는 과목인지 확인
+    const existing=await dbGetByIndex('pages','subject',subject);
+    if(existing.length>0){
+        closeSubjectModal();
+        showToast('이미 있는 노트입니다! 홈에서 열어주세요.',2500);
+        return;
+    }
+    closeSubjectModal();
+    openSubject(subject);
+}
 
-    const PEN_SETTINGS = {
-        ballpen:     { size: 3,  alpha: 1.0, cap: 'round', composite: 'source-over' },
-        pencil:      { size: 4,  alpha: 0.45, cap: 'butt',  composite: 'source-over' },
-        highlighter: { size: 18, alpha: 0.35, cap: 'square',composite: 'source-over' },
-        eraser:      { size: 28, alpha: 1.0, cap: 'round', composite: 'destination-out' },
-    };
+async function deleteSubject(subject){
+    if(!confirm(`"${subject}" 노트를 전부 삭제할까요?\n이 작업은 되돌릴 수 없어요.`)) return;
+    const pages=await dbGetByIndex('pages','subject',subject);
+    for(const p of pages) await dbDelete('pages',p.id);
+    // 즐겨찾기에서도 제거
+    const favs=LS.g('axis_favorites',[]).filter(f=>f!==subject);
+    LS.s('axis_favorites',favs);
+    showToast(`"${subject}" 노트 삭제됨`);
+    await refreshNoteHome();
+}
 
-    window.onload = () => {
-        buildPalette();
-        drawBackground();
-        render();
+function toggleFavorite(subject){
+    const favs=LS.g('axis_favorites',[]);
+    const idx=favs.indexOf(subject);
+    if(idx===-1){
+        favs.push(subject);
+        LS.s('axis_favorites',favs);
+        showToast('⭐ 즐겨찾기에 추가되었어요!',2000);
+    } else {
+        favs.splice(idx,1);
+        LS.s('axis_favorites',favs);
+        showToast('즐겨찾기 해제됨',1800);
+    }
+    refreshNoteHome();
+}
 
-        // 초기 스크롤 중앙 (동적 계산)
-        setTimeout(() => {
-            mainEl.scrollLeft = (mainEl.scrollWidth - mainEl.clientWidth) / 2;
-        }, 50);
+/* ══════════════════════════════════════════════════════════════
+   노트 캔버스 — 문제 = 페이지 1:1 구조
+   problems: [{id, dataURL}]  (문제 인덱스 = 페이지 인덱스)
+══════════════════════════════════════════════════════════════ */
+let currentSubject = null;
+let problems = [];       // [{id, dataURL}]
+let currentProbIdx = 0;
 
-        canvas.addEventListener('contextmenu', e => e.preventDefault());
+const makeId = (sub,pi) => `${sub}__p${pi}`;
 
-        // ── Pointer 단일 체계 ──
-        canvas.addEventListener('pointerdown', onPointerDown);
-        canvas.addEventListener('pointermove', onPointerMove);
-        canvas.addEventListener('pointerup', onPointerUp);
-        canvas.addEventListener('pointercancel', onPointerUp);
-        canvas.addEventListener('pointerleave', onPointerLeave);
-    };
+async function openSubject(subject){
+    currentSubject=subject;
+    currentProbIdx=0;
+    problems=[];
 
-    // ── Pointer Down ──
-    function onPointerDown(e) {
-        canvas.setPointerCapture(e.pointerId);
+    document.getElementById('note-home').style.display='none';
+    document.getElementById('note-canvas-view').classList.add('active');
+    document.getElementById('toolbar').classList.remove('hidden');
+    document.getElementById('note-add-fab').classList.add('hidden');
+    document.getElementById('tab-nav').style.display='none';
 
-        if (e.pointerType === 'pen' || e.pointerType === 'mouse') {
-            // S펜 / 마우스 → 드로잉
-            isPenDrawing = true;
+    const inf=subjectInfo(subject);
+    document.getElementById('toolbar-subject-name').textContent=inf.emoji+' '+subject;
+
+    // DB에서 해당 과목 전부 로드 (probIdx 기준 정렬)
+    const saved=await dbGetByIndex('pages','subject',subject);
+    saved.sort((a,b)=>(a.probIdx??0)-(b.probIdx??0));
+    problems=saved.map(p=>({id:p.id,dataURL:p.dataURL}));
+    if(problems.length===0) problems=[{id:null,dataURL:null}];
+
+    initCanvasListeners();
+    drawBackground();
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,noteCanvas.width,noteCanvas.height);
+    ctx.drawImage(bgCanvas,0,0);
+    await loadCurrentPage();
+    if(problems[0].dataURL===null){
+        stampProbNum(0);
+        await autoSavePage();
+    }
+    updateProbNav();
+}
+
+async function goNoteHome(){
+    await autoSavePage();
+    currentSubject=null;
+    problems=[];
+    document.getElementById('tab-nav').style.display='';
+    showNoteHome();
+}
+
+/* ── 드로잉 전용 캔버스 (배경과 분리) ── */
+const drawCanvas=document.createElement('canvas');
+drawCanvas.width=842; drawCanvas.height=1100;
+const dctx=drawCanvas.getContext('2d');
+
+// 화면에 합성해서 표시 (배경색 + 패턴 + 드로잉)
+function composite(){
+    ctx.clearRect(0,0,noteCanvas.width,noteCanvas.height);
+    // B: 재질 배경색
+    if(currentTexture==='hanji')      ctx.fillStyle='#f9f1de';
+    else if(currentTexture==='kraft') ctx.fillStyle='#d9b97e';
+    else                              ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,noteCanvas.width,noteCanvas.height);
+    // A: 패턴 (줄/모눈/도트)
+    ctx.drawImage(bgCanvas,0,0);
+    // 드로잉
+    ctx.drawImage(drawCanvas,0,0);
+}
+
+/* ── 페이지 로드/저장 ── */
+async function loadCurrentPage(){
+    dctx.clearRect(0,0,842,1100);
+    const id=makeId(currentSubject,currentProbIdx);
+    const record=await dbGet('pages',id).catch(()=>null);
+    if(record?.dataURL){
+        await new Promise(res=>{
+            const img=new Image();
+            img.onload=()=>{dctx.drawImage(img,0,0);res();};
+            img.onerror=()=>res();
+            img.src=record.dataURL;
+        });
+    }
+    composite();
+}
+
+async function autoSavePage(){
+    if(!currentSubject) return;
+    const dataURL=drawCanvas.toDataURL('image/png');
+    const id=makeId(currentSubject,currentProbIdx);
+    const record={id,subject:currentSubject,probIdx:currentProbIdx,pageIdx:0,dataURL,savedAt:Date.now()};
+    await dbPut('pages',record);
+    problems[currentProbIdx]={id,dataURL};
+}
+
+/* ── 문제 번호 스탬프 ── */
+const PROB_NUMS=['➊','➋','➌','➍','➎','➏','➐','➑','➒','➓'];
+function stampProbNum(idx){
+    const label=PROB_NUMS[idx]||(idx+1)+'번';
+    dctx.save();
+    dctx.font='bold 38px serif';
+    dctx.fillStyle='rgba(100,80,200,0.5)';
+    dctx.fillText(label,18,52);
+    dctx.restore();
+    composite();
+}
+
+/* ── 문제 네비게이션 ── */
+async function prevProblem(){
+    if(currentProbIdx===0){showToast('첫 번째 문제예요!');return;}
+    await autoSavePage();
+    currentProbIdx--;
+    await loadCurrentPage();
+    updateProbNav();
+}
+
+async function nextProblem(){
+    const isNew=!problems[currentProbIdx+1];
+    if(isNew){
+        const ok=await showConfirm('다음 문제로 넘어가기',`문제 ${currentProbIdx+1}의 풀이를 저장하고 새 문제를 시작할까요?`);
+        if(!ok) return;
+    }
+    await autoSavePage();
+    currentProbIdx++;
+    if(!problems[currentProbIdx]) problems.push({id:null,dataURL:null});
+    dctx.clearRect(0,0,842,1100);
+    if(isNew){
+        stampProbNum(currentProbIdx);
+        await autoSavePage();
+    } else {
+        await loadCurrentPage();
+    }
+    updateProbNav();
+    if(isNew) showToast(`문제 ${currentProbIdx+1} 시작!`);
+}
+
+function updateProbNav(){
+    document.getElementById('prob-num-input').value=currentProbIdx+1;
+    document.getElementById('prob-total').textContent=problems.length;
+}
+
+async function jumpToProblem(val){
+    document.getElementById('prob-num-input').style.borderColor='rgba(255,255,255,0.15)';
+    const n=parseInt(val)-1;
+    if(isNaN(n)||n<0||n>=problems.length){
+        document.getElementById('prob-num-input').value=currentProbIdx+1;
+        return;
+    }
+    if(n===currentProbIdx) return;
+    await autoSavePage();
+    currentProbIdx=n;
+    await loadCurrentPage();
+    updateProbNav();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   캔버스 엔진
+══════════════════════════════════════════════════════════════ */
+const noteCanvas=document.getElementById('noteCanvas');
+const ctx=noteCanvas.getContext('2d');
+const noteMain=document.getElementById('note-main');
+const zoomIndicator=document.getElementById('zoom-indicator');
+
+const bgCanvas=document.createElement('canvas');
+bgCanvas.width=842; bgCanvas.height=1100;
+const bgCtx=bgCanvas.getContext('2d');
+
+let isDrawing=false,lastX=0,lastY=0;
+let currentPen='ballpen',currentColor='#1a1a1a',currentTemplate='blank',currentTexture='';
+let currentScale=1.0;
+const MIN_SCALE=0.3,MAX_SCALE=4.0;
+let targetScale=1.0,animFrame=null;
+let isPenDrawing=false,isPanning=false;
+let panLastX=0,panLastY=0,panPointerId=null;
+let touchPointers=new Map();
+let pinchStartDist=0,pinchStartScale=1.0;
+let zoomTimeout=null;
+
+// 도형 모드
+let shapeMode=null; // null | 'line'|'rect'|'circle'|'arrow'|'triangle'
+let shapeStart={x:0,y:0};
+let shapeSnapshot=null; // 도형 그리기 전 캔버스 스냅샷
+
+function showZoom(){
+    zoomIndicator.textContent=Math.round(currentScale*100)+'%';
+    zoomIndicator.classList.add('visible');
+    clearTimeout(zoomTimeout);
+    zoomTimeout=setTimeout(()=>zoomIndicator.classList.remove('visible'),1200);
+}
+function applyScale(){
+    noteCanvas.style.width=Math.round(842*currentScale)+'px';
+    noteCanvas.style.height=Math.round(1100*currentScale)+'px';
+    showZoom();
+}
+function smoothZoomTo(target){
+    targetScale=Math.min(MAX_SCALE,Math.max(MIN_SCALE,target));
+    if(animFrame) return;
+    function step(){
+        const diff=targetScale-currentScale;
+        if(Math.abs(diff)<0.002){currentScale=targetScale;applyScale();animFrame=null;return;}
+        currentScale+=diff*0.22;applyScale();animFrame=requestAnimationFrame(step);
+    }
+    animFrame=requestAnimationFrame(step);
+}
+function getPointerDist(p1,p2){return Math.sqrt((p1.x-p2.x)**2+(p1.y-p2.y)**2);}
+
+const COLORS=['#1a1a1a','#e8344a','#1a6fc4','#2a9d60','#e07b20','#8b3fc8','#c4a030','#5a9fbf','#fbbdbd','#bdd6f8','#b8edcc','#fff0b8'];
+const PEN_SETTINGS={
+    ballpen:    {size:3,  alpha:1.0, cap:'round', composite:'source-over'},
+    pencil:     {size:4,  alpha:0.45,cap:'butt',  composite:'source-over'},
+    highlighter:{size:18, alpha:0.35,cap:'square',composite:'source-over'},
+    eraser:     {size:28, alpha:1.0, cap:'round', composite:'destination-out'},
+};
+
+function drawBackground(){
+    bgCtx.clearRect(0,0,842,1100);
+    if(currentTemplate==='blank') return;
+    bgCtx.save(); bgCtx.strokeStyle='rgba(120,120,200,0.13)'; bgCtx.lineWidth=0.8;
+    if(currentTemplate==='ruled'){for(let y=80;y<1100;y+=40){bgCtx.beginPath();bgCtx.moveTo(0,y);bgCtx.lineTo(842,y);bgCtx.stroke();}}
+    else if(currentTemplate==='grid'){for(let x=40;x<842;x+=40){bgCtx.beginPath();bgCtx.moveTo(x,0);bgCtx.lineTo(x,1100);bgCtx.stroke();}for(let y=40;y<1100;y+=40){bgCtx.beginPath();bgCtx.moveTo(0,y);bgCtx.lineTo(842,y);bgCtx.stroke();}}
+    else if(currentTemplate==='dot'){bgCtx.fillStyle='rgba(120,120,200,0.25)';for(let x=40;x<842;x+=40)for(let y=40;y<1100;y+=40){bgCtx.beginPath();bgCtx.arc(x,y,1.2,0,Math.PI*2);bgCtx.fill();}}
+    bgCtx.restore();
+}
+
+function redrawBgOnCanvas(){
+    // 배경 갱신 후 현재 드로잉 레이어 위에 재합성
+    const tempCanvas=document.createElement('canvas');
+    tempCanvas.width=842; tempCanvas.height=1100;
+    const tempCtx=tempCanvas.getContext('2d');
+    tempCtx.drawImage(noteCanvas,0,0);
+    ctx.clearRect(0,0,842,1100);
+    ctx.drawImage(bgCanvas,0,0);
+    ctx.drawImage(tempCanvas,0,0);
+}
+
+function setPen(type){
+    if(shapeMode){cancelShape();}
+    currentPen=type;
+    ['ballpen','pencil','highlighter','eraser'].forEach(id=>{const el=document.getElementById('btn-'+id);if(el)el.classList.toggle('active',id===type);});
+    document.getElementById('btn-shape').classList.remove('active');
+    noteCanvas.style.cursor=type==='eraser'?'cell':'crosshair';
+}
+function changeTexture(val){
+    currentTexture=val;
+    composite();
+}
+async function changeTemplate(t){
+    currentTemplate=t;
+    drawBackground();
+    composite(); // 배경만 바뀌고 드로잉은 drawCanvas에 그대로 유지
+}
+
+// ── 도형 ──
+function toggleShapePanel(){
+    const p=document.getElementById('shape-panel');
+    p.classList.toggle('open');
+    document.getElementById('btn-shape').classList.toggle('active');
+}
+function selectShape(type){
+    shapeMode=type;
+    currentPen=null;
+    ['ballpen','pencil','highlighter','eraser'].forEach(id=>{const el=document.getElementById('btn-'+id);if(el)el.classList.remove('active');});
+    document.getElementById('btn-shape').classList.add('active');
+    document.getElementById('shape-panel').classList.remove('open');
+    noteCanvas.style.cursor='crosshair';
+    showToast(type+' 도형 모드');
+}
+function cancelShape(){
+    shapeMode=null;
+    document.getElementById('shape-panel').classList.remove('open');
+    document.getElementById('btn-shape').classList.remove('active');
+    setPen('ballpen');
+}
+function drawShape(x,y){
+    if(!shapeSnapshot) return;
+    dctx.putImageData(shapeSnapshot,0,0);
+    dctx.save();
+    dctx.strokeStyle=currentColor; dctx.lineWidth=2.5; dctx.lineCap='round';
+    const sx=shapeStart.x,sy=shapeStart.y;
+    dctx.beginPath();
+    if(shapeMode==='line'){dctx.moveTo(sx,sy);dctx.lineTo(x,y);}
+    else if(shapeMode==='rect'){dctx.rect(sx,sy,x-sx,y-sy);}
+    else if(shapeMode==='circle'){const rx=(x-sx)/2,ry=(y-sy)/2;dctx.ellipse(sx+rx,sy+ry,Math.abs(rx),Math.abs(ry),0,0,Math.PI*2);}
+    else if(shapeMode==='arrow'){
+        dctx.moveTo(sx,sy);dctx.lineTo(x,y);
+        const angle=Math.atan2(y-sy,x-sx),len=16;
+        dctx.moveTo(x,y);dctx.lineTo(x-len*Math.cos(angle-0.4),y-len*Math.sin(angle-0.4));
+        dctx.moveTo(x,y);dctx.lineTo(x-len*Math.cos(angle+0.4),y-len*Math.sin(angle+0.4));
+    }
+    else if(shapeMode==='triangle'){dctx.moveTo(sx+(x-sx)/2,sy);dctx.lineTo(x,y);dctx.lineTo(sx,y);dctx.closePath();}
+    dctx.stroke(); dctx.restore();
+    composite();
+}
+
+// ── Pointer 이벤트 (원본 유지 + 도형 추가) ──
+function initCanvasListeners(){
+    noteCanvas.removeEventListener('contextmenu',preventCtx);
+    noteCanvas.removeEventListener('pointerdown',onPointerDown);
+    noteCanvas.removeEventListener('pointermove',onPointerMove);
+    noteCanvas.removeEventListener('pointerup',onPointerUp);
+    noteCanvas.removeEventListener('pointercancel',onPointerUp);
+    noteCanvas.removeEventListener('pointerleave',onPointerLeave);
+    noteCanvas.addEventListener('contextmenu',preventCtx);
+    noteCanvas.addEventListener('pointerdown',onPointerDown);
+    noteCanvas.addEventListener('pointermove',onPointerMove);
+    noteCanvas.addEventListener('pointerup',onPointerUp);
+    noteCanvas.addEventListener('pointercancel',onPointerUp);
+    noteCanvas.addEventListener('pointerleave',onPointerLeave);
+}
+const preventCtx=e=>e.preventDefault();
+
+function onPointerDown(e){
+    noteCanvas.setPointerCapture(e.pointerId);
+    if(e.pointerType==='pen'||e.pointerType==='mouse'){
+        isPenDrawing=true; e.preventDefault();
+        if(shapeMode){
+            const [x,y]=getCoords(e);
+            shapeStart={x,y};
+            shapeSnapshot=dctx.getImageData(0,0,drawCanvas.width,drawCanvas.height);
+            isDrawing=true;
+        } else { startDraw(e); }
+    } else if(e.pointerType==='touch'){
+        touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if(touchPointers.size===1){isPanning=true;panLastX=e.clientX;panLastY=e.clientY;panPointerId=e.pointerId;}
+        else if(touchPointers.size===2){
+            isPanning=false;
+            const pts=Array.from(touchPointers.values());
+            pinchStartDist=getPointerDist(pts[0],pts[1]);pinchStartScale=currentScale;
+        }
+    }
+}
+function onPointerMove(e){
+    if(e.pointerType==='pen'||e.pointerType==='mouse'){
+        if(shapeMode&&isDrawing){const [x,y]=getCoords(e);drawShape(x,y);}
+        else{draw(e);}
+    } else if(e.pointerType==='touch'){
+        touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if(touchPointers.size===1&&isPanning&&e.pointerId===panPointerId){
+            noteMain.scrollLeft+=panLastX-e.clientX;noteMain.scrollTop+=panLastY-e.clientY;
+            panLastX=e.clientX;panLastY=e.clientY;
+        } else if(touchPointers.size===2){
             e.preventDefault();
-            startDraw(e);
-
-        } else if (e.pointerType === 'touch') {
-            touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-            if (touchPointers.size === 1) {
-                // 1손가락 → 패닝 준비
-                isPanning = true;
-                panLastX = e.clientX;
-                panLastY = e.clientY;
-                panPointerId = e.pointerId;
-
-            } else if (touchPointers.size === 2) {
-                // 2손가락 → 핀치줌 시작
-                isPanning = false;
-                const pts = Array.from(touchPointers.values());
-                pinchStartDist = getPointerDist(pts[0], pts[1]);
-                pinchStartScale = currentScale;
-                // 중심점 기준 스크롤 보정용
-                pinchStartMidX = (pts[0].x + pts[1].x) / 2;
-                pinchStartMidY = (pts[0].y + pts[1].y) / 2;
-                pinchStartScrollX = mainEl.scrollLeft;
-                pinchStartScrollY = mainEl.scrollTop;
-            }
+            const pts=Array.from(touchPointers.values());
+            smoothZoomTo(Math.min(MAX_SCALE,Math.max(MIN_SCALE,pinchStartScale*(getPointerDist(pts[0],pts[1])/pinchStartDist))));
         }
     }
-
-    // ── Pointer Move ──
-    function onPointerMove(e) {
-        if (e.pointerType === 'pen' || e.pointerType === 'mouse') {
-            draw(e);
-
-        } else if (e.pointerType === 'touch') {
-            touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-            if (touchPointers.size === 1 && isPanning && e.pointerId === panPointerId) {
-                // 1손가락 패닝
-                const dx = panLastX - e.clientX;
-                const dy = panLastY - e.clientY;
-                mainEl.scrollLeft += dx;
-                mainEl.scrollTop += dy;
-                panLastX = e.clientX;
-                panLastY = e.clientY;
-
-            } else if (touchPointers.size === 2) {
-                // 2손가락 핀치줌
-                e.preventDefault();
-                const pts = Array.from(touchPointers.values());
-                const dist = getPointerDist(pts[0], pts[1]);
-                const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE,
-                    pinchStartScale * (dist / pinchStartDist)
-                ));
-                smoothZoomTo(newScale);
-            }
+}
+function onPointerUp(e){
+    if(e.pointerType==='pen'||e.pointerType==='mouse'){
+        isPenDrawing=false;
+        if(shapeMode&&isDrawing){
+            const [x,y]=getCoords(e);drawShape(x,y);
+            isDrawing=false;shapeSnapshot=null;
+        } else {stopDraw(e);}
+    } else if(e.pointerType==='touch'){
+        touchPointers.delete(e.pointerId);
+        if(touchPointers.size===0){isPanning=false;panPointerId=null;}
+        else if(touchPointers.size===1){
+            isPanning=true;
+            const rem=Array.from(touchPointers.values())[0];
+            panLastX=rem.x;panLastY=rem.y;
+            panPointerId=Array.from(touchPointers.keys())[0];
         }
     }
+}
+function onPointerLeave(e){if((e.pointerType==='pen'||e.pointerType==='mouse')&&isPenDrawing){isPenDrawing=false;isDrawing=false;}}
 
-    // ── Pointer Up ──
-    function onPointerUp(e) {
-        if (e.pointerType === 'pen' || e.pointerType === 'mouse') {
-            isPenDrawing = false;
-            stopDraw(e);
+function startDraw(e){
+    e.preventDefault();isDrawing=true;[lastX,lastY]=getCoords(e);
+    const s=PEN_SETTINGS[currentPen];
+    dctx.save();dctx.globalAlpha=s.alpha;dctx.globalCompositeOperation=s.composite;
+    dctx.fillStyle=s.composite==='destination-out'?'rgba(0,0,0,1)':currentColor;
+    dctx.beginPath();dctx.arc(lastX,lastY,s.size/2,0,Math.PI*2);dctx.fill();dctx.restore();
+    composite();
+}
+function draw(e){
+    if(!isDrawing||!currentPen) return; e.preventDefault();
+    const [x,y]=getCoords(e),s=PEN_SETTINGS[currentPen];
+    const pressure=e.pressure!==undefined&&e.pressure>0?e.pressure:0.5;
+    const dynamicSize=currentPen==='ballpen'?s.size*(0.6+pressure*0.8):s.size;
+    dctx.save();dctx.globalAlpha=s.alpha;dctx.globalCompositeOperation=s.composite;
+    dctx.strokeStyle=s.composite==='destination-out'?'rgba(0,0,0,1)':currentColor;
+    dctx.lineWidth=dynamicSize;dctx.lineCap=s.cap;dctx.lineJoin='round';
+    dctx.beginPath();dctx.moveTo(lastX,lastY);dctx.lineTo(x,y);dctx.stroke();dctx.restore();
+    [lastX,lastY]=[x,y];
+    composite();
+}
+function stopDraw(e){if(!isDrawing)return;isDrawing=false;}
+function getCoords(e){
+    const rect=noteCanvas.getBoundingClientRect();
+    return[(e.clientX-rect.left)*(noteCanvas.width/rect.width),(e.clientY-rect.top)*(noteCanvas.height/rect.height)];
+}
+function saveImageToDevice(){
+    // 배경+드로잉 합성해서 JPEG로 기기에 저장
+    const exp=document.createElement('canvas');
+    exp.width=842; exp.height=1100;
+    const ec=exp.getContext('2d');
+    if(currentTexture==='hanji')      ec.fillStyle='#f9f1de';
+    else if(currentTexture==='kraft') ec.fillStyle='#d9b97e';
+    else                              ec.fillStyle='#ffffff';
+    ec.fillRect(0,0,842,1100);
+    ec.drawImage(bgCanvas,0,0);
+    ec.drawImage(drawCanvas,0,0);
+    const a=document.createElement('a');
+    a.href=exp.toDataURL('image/jpeg',0.85);
+    a.download=`${currentSubject}_문제${currentProbIdx+1}_${todayKey()}.jpg`;
+    a.click();
+    showToast('💾 이미지 저장됨');
+}
 
-        } else if (e.pointerType === 'touch') {
-            touchPointers.delete(e.pointerId);
+async function deleteCurrentProblem(){
+    if(problems.length===1){showToast('마지막 문제는 삭제할 수 없어요.');return;}
+    const ok=await showConfirm('문제 삭제',`문제 ${currentProbIdx+1}을 삭제할까요?`);
+    if(!ok) return;
+    // DB에서 삭제
+    const id=makeId(currentSubject,currentProbIdx);
+    await dbDelete('pages',id).catch(()=>{});
+    problems.splice(currentProbIdx,1);
+    // 삭제 후 probIdx 재정렬 (DB 키 업데이트)
+    for(let i=currentProbIdx;i<problems.length;i++){
+        const oldId=makeId(currentSubject,i+1);
+        const newId=makeId(currentSubject,i);
+        const rec=await dbGet('pages',oldId).catch(()=>null);
+        if(rec){rec.id=newId;rec.probIdx=i;await dbPut('pages',rec);await dbDelete('pages',oldId).catch(()=>{});}
+        problems[i].id=newId;
+    }
+    currentProbIdx=Math.min(currentProbIdx,problems.length-1);
+    await loadCurrentPage();
+    updateProbNav();
+    showToast('문제 삭제됨');
+}
 
-            if (touchPointers.size === 0) {
-                isPanning = false;
-                panPointerId = null;
-            } else if (touchPointers.size === 1) {
-                // 핀치 → 1손가락으로 전환 시 패닝으로
-                isPanning = true;
-                const remaining = Array.from(touchPointers.values())[0];
-                panLastX = remaining.x;
-                panLastY = remaining.y;
-                panPointerId = Array.from(touchPointers.keys())[0];
-            }
+function clearCanvas(){
+    if(!confirm('현재 페이지를 삭제할까요?')) return;
+    dctx.clearRect(0,0,842,1100);
+    // 스탬프 재찍기
+    stampProbNum(currentProbIdx);
+    composite();
+}
+
+function buildPalette(){
+    const el=document.getElementById('palette');
+    COLORS.forEach((c,i)=>{
+        const d=document.createElement('div');
+        d.className='color-dot'+(i===0?' active':'');
+        d.style.background=c;
+        d.onclick=()=>{document.querySelectorAll('.color-dot').forEach(x=>x.classList.remove('active'));d.classList.add('active');currentColor=c;if(currentPen==='eraser')setPen('ballpen');};
+        el.appendChild(d);
+    });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   루틴 localStorage
+══════════════════════════════════════════════════════════════ */
+const getBlock=()=>LS.g('axis_block_v3',[]);
+const setBlock=b=>LS.s('axis_block_v3',b);
+const getChecks=()=>LS.g('axis_checks_v3',{});
+const setChecks=c=>LS.s('axis_checks_v3',c);
+const getStartDate=()=>LS.g('axis_start_v3',null);
+const setStartDate=d=>LS.s('axis_start_v3',d);
+const getCoins=()=>LS.g('axis_coins_v3',0);
+const setCoins=c=>{LS.s('axis_coins_v3',c);document.getElementById('coin-num').textContent=c;document.getElementById('shop-coin-num').textContent=c;};
+const getSettled=()=>LS.g('axis_settled_v3','');
+const setSettled=d=>LS.s('axis_settled_v3',d);
+const getStreakFail=()=>LS.g('axis_streak_fail',0);
+const setStreakFail=n=>LS.s('axis_streak_fail',n);
+
+function toKey(d){return d.toLocaleDateString('sv-SE');}
+function keyToDate(k){return new Date(k+'T00:00:00');}
+function todayKey(){return toKey(new Date());}
+function fmt(k){const d=keyToDate(k);return d.toLocaleDateString('ko-KR',{month:'numeric',day:'numeric',weekday:'short'});}
+
+/* ── 등급 계산 (가장 낮은 루틴 기준) ── */
+function getRoutineGrade(r,dc){
+    if(r.steps.bonus&&dc[r.id+'_bonus']) return 'bonus';
+    if(r.steps.base &&dc[r.id+'_base'])  return 'base';
+    if(r.steps.min  &&dc[r.id+'_min'])   return 'min';
+    return null;
+}
+function getTodayGrade(block,dc){
+    if(!block.length) return null;
+    const grades=block.map(r=>getRoutineGrade(r,dc));
+    if(grades.every(g=>g==='bonus')) return 'bonus';
+    if(grades.every(g=>g==='base'||g==='bonus')) return 'base';
+    if(grades.every(g=>g!==null)) return 'min';
+    return null;
+}
+
+/* ── 진행도 계산 (최소=1/3, 기본=2/3, 보너스=3/3) ── */
+function calcProgress(block,dc){
+    if(!block.length) return 0;
+    let total=0;
+    block.forEach(r=>{
+        const stepsCount=['min','base','bonus'].filter(g=>r.steps[g]).length;
+        if(!stepsCount) return;
+        const grade=getRoutineGrade(r,dc);
+        const achieved=grade==='bonus'?stepsCount:grade==='base'?Math.min(2,stepsCount):grade==='min'?1:0;
+        total+=achieved/stepsCount;
+    });
+    return Math.round(total/block.length*100);
+}
+
+/* ── 자정 정산 (새 코인 시스템) ── */
+function settle(dk){
+    const block=getBlock(),checks=getChecks(),dc=checks[dk]||{};
+    if(!block.length) return;
+    const grade=getTodayGrade(block,dc);
+    let cd;
+    if(grade==='bonus')     cd=25;
+    else if(grade==='base') cd=0;
+    else if(grade==='min')  cd=-5;
+    else                    cd=-10;
+
+    // 연속 미달성 카운트
+    if(!grade){
+        const fail=getStreakFail()+1;
+        setStreakFail(fail);
+        if(fail>=5){
+            showToast('⚠️ 5일 연속 미달성 — 암호가 파괴됩니다!',5000);
+            // TODO: 금고 암호 파괴 로직 (나중에)
         }
+    } else { setStreakFail(0); }
+
+    setCoins(getCoins()+cd);
+}
+async function checkSettle(){
+    const last=getSettled(),today=todayKey();
+    if(last&&last!==today){
+        settle(last);
+        // 노트 전체 삭제
+        const allPages=await dbGetAll('pages');
+        for(const p of allPages) await dbDelete('pages',p.id).catch(()=>{});
+        // 루틴 진행도 초기화 (오늘 체크 기록 삭제)
+        const checks=getChecks();
+        delete checks[last];
+        setChecks(checks);
+    }
+    setSettled(today);
+}
+
+/* ── 스탬프 (출석 체크) ── */
+function initStamp(){
+    const today=todayKey();
+    const last=LS.g('axis_stamp','');
+    const banner=document.getElementById('stamp-banner');
+    if(last===today){
+        banner.classList.add('stamped');
+        document.getElementById('stamp-title').textContent='출석 완료!';
+        document.getElementById('stamp-sub').textContent='오늘 이미 도장을 찍었어요 ✓';
+        document.getElementById('stamp-coin').textContent='+3 ✓';
+    } else {
+        banner.classList.remove('stamped');
+        document.getElementById('stamp-title').textContent='오늘의 출석 체크';
+        document.getElementById('stamp-sub').textContent='탭해서 출석 도장 찍기 → +3코인';
+        document.getElementById('stamp-coin').textContent='+3 ✦';
+    }
+}
+function doStamp(){
+    const today=todayKey();
+    if(LS.g('axis_stamp','')===today){showToast('오늘 이미 출석 체크했어요!');return;}
+    LS.s('axis_stamp',today);
+    setCoins(getCoins()+3);
+    initStamp();
+    showToast('🗓️ 출석 체크! +3 코인',2500);
+}
+
+/* ── 루틴 설정 ── */
+let tempBlock=[];
+function openSetup(){
+    tempBlock=JSON.parse(JSON.stringify(getBlock()));
+    ['inp-name','inp-min','inp-base','inp-bonus'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('setup-screen').style.display='flex';
+    renderExisting();
+}
+function closeSetup(){document.getElementById('setup-screen').style.display='none';}
+function saveSetup(){
+    if(!tempBlock.length){alert('루틴을 하나 이상 추가해주세요!');return;}
+    if(tempBlock.filter(r=>r.category==='입시').length<2){alert('입시 카테고리 루틴을 2개 이상 추가해주세요!');return;}
+    if(tempBlock.filter(r=>r.category==='건강').length<1){alert('건강 카테고리 루틴을 1개 이상 추가해주세요!');return;}
+    setBlock(tempBlock);
+    if(!getStartDate()) setStartDate(todayKey());
+    closeSetup();render();
+}
+function addRoutineItem(){
+    const name=document.getElementById('inp-name').value.trim();
+    const minV=document.getElementById('inp-min').value.trim();
+    const baseV=document.getElementById('inp-base').value.trim();
+    const bonusV=document.getElementById('inp-bonus').value.trim();
+    const category=document.getElementById('inp-category').value;
+    if(!name){alert('루틴 이름을 입력해주세요!');return;}
+    if(!minV&&!baseV&&!bonusV){alert('최소 하나의 목표를 입력해주세요!');return;}
+    tempBlock.push({id:Date.now(),name,category,steps:{
+        min:  minV  ?{label:minV}  :null,
+        base: baseV ?{label:baseV} :null,
+        bonus:bonusV?{label:bonusV}:null,
+    }});
+    ['inp-name','inp-min','inp-base','inp-bonus'].forEach(id=>document.getElementById(id).value='');
+    renderExisting();
+}
+function delSetupItem(id){tempBlock=tempBlock.filter(x=>x.id!==id);renderExisting();}
+
+const catColor={'입시':'#a855f7','건강':'#22d3a0','서브스킬':'#f59e0b','기타':'rgba(248,246,255,0.3)'};
+
+function renderExisting(){
+    const el=document.getElementById('existing-routines');
+    if(!tempBlock.length){el.innerHTML='';return;}
+    el.innerHTML=tempBlock.map(r=>{
+        const steps=['min','base','bonus'].filter(g=>r.steps[g]).map(g=>`<span class="er-step s-${g}">${r.steps[g].label}</span>`).join('');
+        const cc=catColor[r.category]||'rgba(248,246,255,0.3)';
+        return `<div class="er-item">
+            <span style="font-size:10px;padding:2px 7px;border-radius:100px;border:1px solid;color:${cc};border-color:${cc};white-space:nowrap;">${r.category}</span>
+            <div class="er-name">${r.name}</div>
+            <div class="er-steps">${steps}</div>
+            <button class="er-del" onclick="delSetupItem(${r.id})">×</button></div>`;
+    }).join('');
+}
+
+/* ── PIN ── */
+function getTodayPIN(){
+    const stored=LS.g('axis_pin',null),today=todayKey();
+    if(stored&&stored.date===today) return stored.pin;
+    const pin=String(Math.floor(1000+Math.random()*9000));
+    LS.s('axis_pin',{date:today,pin});return pin;
+}
+function showPinInfo(){alert('오늘의 PIN: '+getTodayPIN()+'\n\nPIN은 자정마다 자동으로 바뀌어요.\n파일 첨부 인증 시 사진에 이 PIN이 보여야 합니다.');}
+
+/* ── 프롬프트 ── */
+const BASE_PROMPT_NOTE=`당신은 수능 준비생의 학습 인증 심사관입니다.
+학생이 오늘 특정 과목을 공부한 노트 이미지를 전달합니다.
+
+[판단 기준]
+1. 이미지에 실제 문제 풀이, 공식, 필기가 있는지 확인하세요.
+2. 정답/오답은 판단하지 않습니다. 성실하게 풀었는지만 봅니다.
+3. 빈 페이지이거나 낙서 수준이면 실패입니다.
+4. 풀이량이 목표치에 근접하면 통과입니다.
+
+JSON만 출력: {"verified": true/false, "reason": "한 줄 이유"}`;
+
+const BASE_PROMPT_PHOTO=`당신은 수능 준비생의 자기관리 앱 인증 심사관입니다.
+사용자는 루틴 수행 후 PIN이 포함된 사진을 업로드합니다.
+
+[중요 규칙]
+1. 사진 안에 오늘의 PIN 4자리가 반드시 보여야 합니다. PIN이 없거나 틀리면 무조건 실패입니다.
+2. PIN이 확인되면, 사진이 목표를 달성한 직접적인 증거를 담고 있는지 판단하세요.
+3. 직접 증거란: 타이머/앱 기록, 교재/노트, 운동 장면, 스크린샷 등 목표와 명확히 연관된 증거입니다.
+4. 증거가 애매하거나 목표와 무관하면 실패입니다.
+5. 인터넷에서 가져온 사진처럼 보이면 실패입니다.
+
+JSON만 출력: {"verified": true/false, "reason": "한 줄 이유"}`;
+
+const getCustomPrompts=()=>LS.g('axis_prompts',{});
+const setCustomPrompts=p=>LS.s('axis_prompts',p);
+
+function openPromptSettings(){
+    const block=getBlock(),customs=getCustomPrompts();
+    document.getElementById('base-prompt-note-edit').value=LS.g('axis_base_prompt_note',BASE_PROMPT_NOTE);
+    document.getElementById('base-prompt-photo-edit').value=LS.g('axis_base_prompt_photo',BASE_PROMPT_PHOTO);
+    document.getElementById('prompt-fields').innerHTML=block.length
+        ?block.map(r=>`<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;color:var(--w60);margin-bottom:6px;font-family:'Syne',sans-serif;">${r.name} <span style="font-weight:400;color:var(--w30);font-size:10px;">(${r.category})</span></div><textarea data-routine="${r.name}" style="width:100%;min-height:72px;padding:9px 12px;background:var(--surface3);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:12px;outline:none;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.5;" placeholder="추가 판단 기준 (선택사항)">${customs[r.name]||''}</textarea></div>`).join('')
+        :'<div style="color:var(--w30);font-size:13px;text-align:center;padding:18px 0;">루틴을 먼저 설정해주세요.</div>';
+    document.getElementById('prompt-modal').style.display='flex';
+}
+function closePromptSettings(){document.getElementById('prompt-modal').style.display='none';}
+function savePromptSettings(){
+    LS.s('axis_base_prompt_note', document.getElementById('base-prompt-note-edit').value.trim()||BASE_PROMPT_NOTE);
+    LS.s('axis_base_prompt_photo', document.getElementById('base-prompt-photo-edit').value.trim()||BASE_PROMPT_PHOTO);
+    const customs={};
+    document.querySelectorAll('[data-routine]').forEach(el=>{const v=el.value.trim();if(v)customs[el.dataset.routine]=v;});
+    setCustomPrompts(customs);closePromptSettings();showToast('✦ 프롬프트 설정 저장됨');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   루틴 인증
+══════════════════════════════════════════════════════════════ */
+let pendingVerify=null; // {routineId, grade, category, routineName, step}
+
+function startVerifyFlow(routineId,grade){
+    const block=getBlock();
+    const routine=block.find(r=>r.id===routineId);
+    if(!routine) return;
+    pendingVerify={routineId,grade,category:routine.category,routineName:routine.name,step:routine.steps[grade]};
+
+    if(routine.category==='입시'){
+        // 입시: 선택 모달
+        document.getElementById('vm-title').textContent=`${routine.name} — 인증 방식 선택`;
+        document.getElementById('vm-sub').textContent=`목표: ${routine.steps[grade].label}`;
+        document.getElementById('verify-method-modal').classList.add('open');
+    } else {
+        // 나머지: 사진 첨부만
+        verifyByPhoto();
+    }
+}
+function closeVerifyMethodModal(){document.getElementById('verify-method-modal').classList.remove('open');}
+
+async function verifyByNote(){
+    closeVerifyMethodModal();
+    if(!pendingVerify) return;
+    const {routineId,grade,routineName,step}=pendingVerify;
+
+    const matched=SUBJECTS.find(s=>routineName.includes(s.name));
+    const subjectName=matched?matched.name:routineName;
+
+    const allPages=await dbGetByIndex('pages','subject',subjectName);
+    if(allPages.length===0){
+        showCertModal(false,'인증 실패',`📝 "${subjectName}" 노트가 없어요.\n노트탭에서 먼저 풀이를 작성해주세요!`);
+        return;
     }
 
-    // ── Pointer Leave ──
-    function onPointerLeave(e) {
-        if (e.pointerType === 'pen' || e.pointerType === 'mouse') {
-            if (isPenDrawing) {
-                isPenDrawing = false;
-                stopDraw(e);
-            }
-        }
-    }
+    const apiKey=LS.g('axis_api_key','');
+    if(!apiKey){showToast('API Key를 입력해주세요!');return;}
 
-    function buildPalette() {
-        const el = document.getElementById('palette');
-        COLORS.forEach((c, i) => {
-            const d = document.createElement('div');
-            d.className = `color-dot ${i === 0 ? 'active' : ''}`;
-            d.style.background = c;
-            d.style.border = c === '#ffffff' || c === '#fff0b8' ? '1px solid rgba(255,255,255,0.2)' : '';
-            d.onclick = () => {
-                document.querySelectorAll('.color-dot').forEach(x => x.classList.remove('active'));
-                d.classList.add('active');
-                currentColor = c;
-                if (currentPen === 'eraser') setPen('ballpen');
-            };
-            el.appendChild(d);
+    setVerifyBtnLoading(routineId,grade,true);
+
+    try{
+        // 문제=페이지 1:1, probIdx 기준 정렬 후 최대 10개
+        allPages.sort((a,b)=>(a.probIdx??0)-(b.probIdx??0));
+        const sampled=allPages.slice(0,10);
+        const probCount=allPages.length;
+        const baseNote=LS.g('axis_base_prompt_note',BASE_PROMPT_NOTE);
+        const custom=getCustomPrompts()[routineName]||'';
+        const promptText=baseNote
+            +`\n\n[과목] ${subjectName}`
+            +`\n[목표] ${step.label}`
+            +(custom?`\n\n[추가 기준]\n${custom}`:'')
+            +`\n\n각 이미지는 하나의 문제 풀이입니다. 이미지 순서대로 문제1, 문제2...로 판단하세요.`;
+
+        const content=[{type:'text',text:promptText}];
+        sampled.forEach(p=>{
+            if(p.dataURL) content.push({type:'image_url',image_url:{url:p.dataURL}});
         });
+
+        const resp=await fetch('https://api.openai.com/v1/chat/completions',
+            {method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+             body:JSON.stringify({model:LS.g('axis_model','gpt-5-mini-2025-08-07'),messages:[{role:'user',content}],max_completion_tokens:2000,temperature:0.1})}
+        );
+        const data=await resp.json();
+        const txt=data.choices?.[0]?.message?.content||'{}';
+        const res=JSON.parse(txt.replace(/```json|```/g,'').trim());
+        if(data.usage) showToast(`📊 입력 ${data.usage.prompt_tokens} / 출력 ${data.usage.completion_tokens} 토큰`,3000);
+        handleVerifyResult(res,routineId,grade);
+    }catch(err){
+        setVerifyBtnLoading(routineId,grade,false);
+        showCertModal(false,'오류 발생','API 오류: '+err.message);
     }
+}
 
-    function setPen(type) {
-        currentPen = type;
-        ['ballpen','pencil','highlighter','eraser'].forEach(id => {
-            const el = document.getElementById(`btn-${id}`);
-            if (el) el.classList.toggle('active', id === type);
-        });
-        canvas.classList.toggle('eraser-mode', type === 'eraser');
-    }
+function verifyByPhoto(){
+    closeVerifyMethodModal();
+    document.getElementById('verify-file-input').click();
+}
 
-    function changeTexture(val) {
-        canvas.className = val ? `texture-${val}` : '';
-        if (currentPen === 'eraser') canvas.classList.add('eraser-mode');
-    }
+async function handlePhotoVerify(e){
+    const file=e.target.files[0];
+    if(!file||!pendingVerify) return;
+    const {routineId,grade,routineName,step}=pendingVerify;
+    const apiKey=LS.g('axis_api_key','');
+    if(!apiKey){showToast('API Key를 입력해주세요!');return;}
 
-    function changeTemplate(t) {
-        currentTemplate = t;
-        drawBackground();
-        composite();
-    }
+    setVerifyBtnLoading(routineId,grade,true);
 
-    // 배경 전용 캔버스에 선 그리기 — 핵심 수정 (내용과 배경 분리)
-    function drawBackground() {
-        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-        if (currentTemplate === 'blank') return;
-
-        bgCtx.save();
-        const LINE_COLOR = 'rgba(120,120,200,0.12)';
-        bgCtx.strokeStyle = LINE_COLOR;
-        bgCtx.lineWidth = 0.8;
-
-        if (currentTemplate === 'ruled') {
-            for (let y = 80; y < bgCanvas.height; y += 40) {
-                bgCtx.beginPath();
-                bgCtx.moveTo(0, y); bgCtx.lineTo(bgCanvas.width, y);
-                bgCtx.stroke();
-            }
-        } else if (currentTemplate === 'grid') {
-            for (let x = 40; x < bgCanvas.width; x += 40) {
-                bgCtx.beginPath(); bgCtx.moveTo(x, 0); bgCtx.lineTo(x, bgCanvas.height); bgCtx.stroke();
-            }
-            for (let y = 40; y < bgCanvas.height; y += 40) {
-                bgCtx.beginPath(); bgCtx.moveTo(0, y); bgCtx.lineTo(bgCanvas.width, y); bgCtx.stroke();
-            }
-        } else if (currentTemplate === 'dot') {
-            bgCtx.fillStyle = 'rgba(120,120,200,0.25)';
-            for (let x = 40; x < bgCanvas.width; x += 40) {
-                for (let y = 40; y < bgCanvas.height; y += 40) {
-                    bgCtx.beginPath();
-                    bgCtx.arc(x, y, 1.2, 0, Math.PI * 2);
-                    bgCtx.fill();
-                }
-            }
-        }
-        bgCtx.restore();
-    }
-
-    // 배경 + 드로잉 레이어 합성
-    function composite() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(bgCanvas, 0, 0);
-    }
-
-    // 드로잉 전용 캔버스 (별도)
-    const drawCanvas = document.createElement('canvas');
-    drawCanvas.width = 842; drawCanvas.height = 1100;
-    const drawCtx = drawCanvas.getContext('2d');
-
-    // 실제 렌더: bg + drawing 합성
-    function render() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(bgCanvas, 0, 0);
-        ctx.drawImage(drawCanvas, 0, 0);
-    }
-
-    function startDraw(e) {
-        e.preventDefault();
-        isDrawing = true;
-        [lastX, lastY] = getCoords(e);
-        // 점 찍기 (클릭만 했을 때도 점 남도록)
-        const s = PEN_SETTINGS[currentPen];
-        drawCtx.save();
-        drawCtx.globalAlpha = s.alpha;
-        drawCtx.globalCompositeOperation = s.composite;
-        drawCtx.fillStyle = s.composite === 'destination-out' ? 'rgba(0,0,0,1)' : currentColor;
-        drawCtx.beginPath();
-        drawCtx.arc(lastX, lastY, s.size / 2, 0, Math.PI * 2);
-        drawCtx.fill();
-        drawCtx.restore();
-        render();
-    }
-
-    function draw(e) {
-        if (!isDrawing) return;
-        e.preventDefault();
-        const [x, y] = getCoords(e);
-        const s = PEN_SETTINGS[currentPen];
-
-        // S펜 압력 지원
-        const pressure = e.pressure !== undefined && e.pressure > 0 ? e.pressure : 0.5;
-        const dynamicSize = currentPen === 'ballpen'
-            ? s.size * (0.6 + pressure * 0.8)
-            : s.size;
-
-        drawCtx.save();
-        drawCtx.globalAlpha = s.alpha;
-        drawCtx.globalCompositeOperation = s.composite;
-        drawCtx.strokeStyle = s.composite === 'destination-out' ? 'rgba(0,0,0,1)' : currentColor;
-        drawCtx.lineWidth = dynamicSize;
-        drawCtx.lineCap = s.cap;
-        drawCtx.lineJoin = 'round';
-
-        drawCtx.beginPath();
-        drawCtx.moveTo(lastX, lastY);
-        drawCtx.lineTo(x, y);
-        drawCtx.stroke();
-        drawCtx.restore();
-
-        [lastX, lastY] = [x, y];
-        render();
-    }
-
-    function stopDraw(e) {
-        if (!isDrawing) return;
-        isDrawing = false;
-    }
-
-    function getCoords(e) {
-        const rect = canvas.getBoundingClientRect();
-        return [
-            (e.clientX - rect.left) * (canvas.width / rect.width),
-            (e.clientY - rect.top) * (canvas.height / rect.height)
+    try{
+        const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(file);});
+        const pin=getTodayPIN();
+        const basePhoto=LS.g('axis_base_prompt_photo',BASE_PROMPT_PHOTO);
+        const custom=getCustomPrompts()[routineName]||'';
+        const promptText=basePhoto+`\n\n[오늘의 PIN] ${pin}\n[루틴명] ${routineName}\n[오늘 목표] ${step.label}${custom?'\n\n[추가 기준]\n'+custom:''}\n\n위 사진을 판단하세요.`;
+        const content=[
+            {type:'text',text:promptText},
+            {type:'image_url',image_url:{url:`data:${file.type};base64,${b64}`}}
         ];
+        const resp=await fetch('https://api.openai.com/v1/chat/completions',
+            {method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+             body:JSON.stringify({model:LS.g('axis_model','gpt-5-mini-2025-08-07'),messages:[{role:'user',content}],max_completion_tokens:2000,temperature:0.1})});
+        const data=await resp.json();
+        const txt=data.choices?.[0]?.message?.content||'{}';
+        const res=JSON.parse(txt.replace(/```json|```/g,'').trim());
+        if(data.usage) showToast(`📊 입력 ${data.usage.prompt_tokens} / 출력 ${data.usage.completion_tokens} 토큰`,3000);
+        handleVerifyResult(res,routineId,grade);
+    }catch(err){
+        setVerifyBtnLoading(routineId,grade,false);
+        showCertModal(false,'오류 발생','API 오류: '+err.message);
     }
+    e.target.value='';
+}
 
-    function clearCanvas() {
-        if (!confirm('전체 내용을 삭제할까요?')) return;
-        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+function handleVerifyResult(res,routineId,grade){
+    setVerifyBtnLoading(routineId,grade,false);
+    if(res.verified){
+        const checks=getChecks(),today=todayKey();
+        if(!checks[today]) checks[today]={};
+        checks[today][routineId+'_'+grade]=true;
+        setChecks(checks);
+        showCertModal(true,'✦ 인증 성공!',res.reason||'성실하게 수행했어요!');
         render();
-        aiText.className = 'placeholder';
-        aiText.textContent = '위 버튼을 눌러 AI가 노트를 읽게 하세요.';
+    } else {
+        showCertModal(false,'✕ 인증 실패',res.reason||'조건을 충족하지 못했어요.\n\n다시 시도해주세요.');
     }
+}
+function setVerifyBtnLoading(routineId,grade,loading){
+    const ck=routineId+'_'+grade;
+    const btn=document.querySelector(`[data-vkey="${ck}"]`);
+    if(!btn) return;
+    if(loading){btn.classList.add('loading-v');btn.textContent='검사중...';}
+    else{btn.classList.remove('loading-v');btn.textContent='인증하기';}
+}
 
-    // ── Gemini AI 연동 (버그 수정) ──
-    async function readNoteWithAI() {
-        const apiKey = document.getElementById('api-key').value.trim();
-        const model = document.getElementById('model-select').value;
-        if (!apiKey) { alert('Gemini API Key를 입력해주세요!'); return; }
+async function startReverify(routineId,grade){
+    const checks=getChecks(),today=todayKey();
+    if(checks[today]) delete checks[today][routineId+'_'+grade];
+    setChecks(checks);render();
+    const block=getBlock();
+    const routine=block.find(r=>r.id===routineId);
+    if(routine) pendingVerify={routineId,grade,category:routine.category,routineName:routine.name,step:routine.steps[grade]};
+    if(routine?.category==='입시'){
+        document.getElementById('vm-title').textContent=`${routine.name} — 재검사`;
+        document.getElementById('vm-sub').textContent=`목표: ${routine.steps[grade].label}`;
+        document.getElementById('verify-method-modal').classList.add('open');
+    } else { verifyByPhoto(); }
+}
 
-        aiBtn.disabled = true;
-        aiText.className = 'loading dot-anim';
-        aiText.textContent = 'AI가 필기를 분석하고 있습니다';
+function showCertModal(success,title,body){
+    document.getElementById('cert-title').textContent=title;
+    document.getElementById('cert-title').style.color=success?'var(--green)':'var(--red)';
+    document.getElementById('cert-body').textContent=body;
+    document.getElementById('cert-modal').classList.add('open');
+}
+function closeCertModal(){document.getElementById('cert-modal').classList.remove('open');}
 
-        try {
-            // AI에게는 배경선 없이 드로잉만 보냄 (더 정확한 인식)
-            const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = canvas.width;
-            exportCanvas.height = canvas.height;
-            const exportCtx = exportCanvas.getContext('2d');
-            exportCtx.fillStyle = '#ffffff';
-            exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-            exportCtx.drawImage(drawCanvas, 0, 0);  // 드로잉만 (배경선 제외)
-
-            const base64Image = exportCanvas.toDataURL('image/jpeg', 0.9).split(',')[1];
-
-            const resp = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                {
-                                    text: `이 이미지는 사용자가 직접 손글씨로 쓴 노트입니다.\n다음 규칙을 따라 출력해주세요:\n1. 이미지에 적힌 모든 글자를 빠짐없이 읽어서 텍스트로 변환하세요.\n2. 그림이나 도형이 있다면 [그림: 설명] 형식으로 간략히 설명하세요.\n3. 이미지가 완전히 비어있다면 "(빈 캔버스)" 라고만 출력하세요.\n4. 그 외 어떤 안내 문구도 추가하지 마세요. 내용만 출력하세요.`
-                                },
-                                {
-                                    inlineData: { mimeType: 'image/jpeg', data: base64Image }
-                                }
-                            ]
-                        }],
-                        generationConfig: { temperature: 0.1 }
-                    })
-                }
-            );
-
-            if (!resp.ok) {
-                const err = await resp.json().catch(() => ({}));
-                throw new Error(err.error?.message || `HTTP ${resp.status}`);
-            }
-
-            const data = await resp.json();
-
-            // 안전한 응답 파싱 (버그 수정)
-            const candidate = data?.candidates?.[0];
-            if (!candidate) {
-                const blockReason = data?.promptFeedback?.blockReason;
-                throw new Error(blockReason ? `차단됨: ${blockReason}` : '응답이 없습니다.');
-            }
-            if (candidate.finishReason === 'SAFETY') {
-                throw new Error('안전 정책으로 인해 응답이 차단되었습니다.');
-            }
-
-            const resultText = candidate?.content?.parts?.[0]?.text;
-            if (!resultText) throw new Error('AI가 텍스트를 반환하지 않았습니다.');
-
-            aiText.className = '';
-            aiText.textContent = resultText;
-
-        } catch (err) {
-            console.error('[S-Sketch AI]', err);
-            aiText.className = 'error';
-            aiText.textContent = `오류: ${err.message}\n\nAPI 키 또는 네트워크를 확인해주세요.`;
-        } finally {
-            aiBtn.disabled = false;
-        }
+/* ══════════════════════════════════════════════════════════════
+   루틴 렌더
+══════════════════════════════════════════════════════════════ */
+function render(){
+    setCoins(getCoins());
+    document.getElementById('today-label-str').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'}).toUpperCase();
+    initStamp();
+    const block=getBlock();
+    if(!block.length){
+        document.getElementById('today-sub-str').textContent='루틴을 설정해주세요.';
+        document.getElementById('prog-fill').style.width='0%';
+        document.getElementById('prog-pct').textContent='0%';
+        document.getElementById('checklist-wrap').innerHTML='<div class="empty-state">아직 루틴이 없어요.<br><button onclick="openSetup()">✦ 루틴 설정하기</button></div>';
+        document.getElementById('day-grid').innerHTML='';
+        return;
     }
+    const checks=getChecks(),todayChecks=checks[todayKey()]||{};
+    renderChecklist(block,todayChecks);
+    renderDayGrid(block,checks);
+}
 
-    // 초기 렌더는 onload에서 실행
+function renderChecklist(block,todayChecks){
+    const pct=calcProgress(block,todayChecks);
+    const todayGrade=getTodayGrade(block,todayChecks);
+    const gradeLabel={bonus:'보너스 달성 중 🟢',base:'기본 달성 중 🟡',min:'최소 달성 중 🔴'};
+    const done=block.filter(r=>getRoutineGrade(r,todayChecks)!==null).length;
+    document.getElementById('today-sub-str').textContent=todayGrade==='bonus'&&done===block.length?'오늘 완료! 🎉':(gradeLabel[todayGrade]||'미달성 ⚫');
+    document.getElementById('prog-fill').style.width=pct+'%';
+    document.getElementById('prog-pct').textContent=pct+'%';
+
+    // 정산 예정 코인
+    const previewEl=document.getElementById('coin-preview-val');
+    const grade=getTodayGrade(block,todayChecks);
+    const cd=grade==='bonus'?25:grade==='base'?0:grade==='min'?-5:-10;
+    const cdStr=cd>0?'+'+cd:String(cd);
+    const cdColor=cd>0?'var(--green)':cd<0?'var(--red)':'var(--w30)';
+    previewEl.textContent=cdStr+' ✦';
+    previewEl.style.color=cdColor;
+    const DOTS={min:'dot-min',base:'dot-base',bonus:'dot-bonus'};
+
+    const html=block.map((r,ri)=>{
+        const cc=catColor[r.category]||'rgba(248,246,255,0.3)';
+        const catBadge=`<span style="font-size:10px;padding:2px 7px;border-radius:100px;border:1px solid;color:${cc};border-color:${cc};opacity:.8;">${r.category}</span>`;
+        const stepsHtml=['min','base','bonus'].filter(g=>r.steps[g]).map((g,gi,arr)=>{
+            const ck=r.id+'_'+g;
+            const isDone=!!todayChecks[ck];
+            const isLocked=arr.slice(0,gi).some(pg=>!todayChecks[r.id+'_'+pg]);
+            let btnHtml;
+            if(isDone){
+                btnHtml=`<button class="verify-btn done-v" data-vkey="${ck}">✓ 완료</button><button class="verify-btn" style="margin-left:3px;font-size:10px;" onclick="startReverify(${r.id},'${g}')">↩</button>`;
+            } else if(!isLocked){
+                btnHtml=`<button class="verify-btn cert-btn" data-vkey="${ck}" onclick="startVerifyFlow(${r.id},'${g}')">인증하기</button>`;
+            } else {
+                btnHtml=`<button class="verify-btn" style="opacity:.3;cursor:not-allowed;">🔒</button>`;
+            }
+            const bc='step-block'+(isDone?' done':isLocked?' locked':'');
+            return (gi>0?'<span class="step-arrow">→</span>':'')
+                +`<div class="${bc}"><div class="step-dot ${DOTS[g]}"></div><span class="step-text">${r.steps[g].label}</span>${isDone?'<span class="step-check">✓</span>':''}${btnHtml}</div>`;
+        }).join('');
+        return `<div class="routine-card" style="animation-delay:${ri*.06}s"><div class="rc-top"><div class="rc-name">${r.name}</div>${catBadge}</div><div class="rc-steps">${stepsHtml}</div></div>`;
+    }).join('');
+    document.getElementById('checklist-wrap').innerHTML=html+`<div style="display:flex;justify-content:flex-end;margin-top:8px;"><button class="edit-btn" onclick="openSetup()">⚙ 루틴 수정</button></div>`;
+}
+
+function renderDayGrid(block,checks){
+    const startDate=getStartDate();
+    if(!startDate){document.getElementById('day-grid').innerHTML='';return;}
+    const today=todayKey(),start=keyToDate(startDate);
+    const todayD=new Date();todayD.setHours(0,0,0,0);
+    const days=[];
+    for(let d=new Date(todayD);d>=start;d.setDate(d.getDate()-1)) days.push(toKey(new Date(d)));
+    const gradeCol={bonus:'var(--green)',base:'var(--gold)',min:'var(--red)',null:'var(--w30)'};
+    const gradeEmoji={bonus:'🟢',base:'🟡',min:'🔴',null:'⚫'};
+    document.getElementById('day-grid').innerHTML=days.map((dk,i)=>{
+        const isToday=dk===today,dc=checks[dk]||{};
+        const dots=block.map(r=>{const g=getRoutineGrade(r,dc);const isPending=isToday&&!g;return `<div class="dc-dot ${g?'d-'+g:isPending?'d-pending':'d-fail'}" title="${r.name}"></div>`;}).join('');
+        const dayGrade=getTodayGrade(block,dc);
+        const doneCnt=block.filter(r=>getRoutineGrade(r,dc)!==null).length;
+        const pct=calcProgress(block,dc);
+        const col=gradeCol[dayGrade]||gradeCol[null];
+        return `<div class="day-card${isToday?' is-today':''}" style="animation-delay:${i*.04}s">
+            <div class="dc-top"><div class="dc-date">${fmt(dk)}</div>${isToday?'<div class="dc-badge">TODAY</div>':'<span style="font-size:15px;">'+(gradeEmoji[dayGrade]||gradeEmoji[null])+'</span>'}</div>
+            <div class="dc-dots">${dots}</div>
+            <div><div class="dc-pct ${pct===100?'full':pct>0?'partial':'zero'}" style="color:${col}">${pct}%</div>
+            <div class="dc-sub">${doneCnt}/${block.length} 루틴</div></div></div>`;
+    }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   상점
+══════════════════════════════════════════════════════════════ */
+const SHOP_ITEMS=[
+    {id:'hint',icon:'💡',name:'힌트 코인',desc:'다음 문제의 힌트를 볼 수 있어요. (준비 중)',cost:10},
+    {id:'rest',icon:'🛌',name:'휴식 쿠폰',desc:'하루 루틴을 건너뛸 수 있어요. (준비 중)',cost:30},
+    {id:'boost',icon:'⚡',name:'2배 코인',desc:'다음 정산에서 코인이 2배로 적립돼요. (준비 중)',cost:20},
+    {id:'safe',icon:'🔐',name:'금고 열쇠',desc:'수능 결과 금고를 잠글 수 있어요. (준비 중)',cost:50},
+];
+function renderShop(){
+    setCoins(getCoins());
+    document.getElementById('shop-grid').innerHTML=SHOP_ITEMS.map((item,i)=>`
+        <div class="shop-item" style="animation-delay:${i*.06}s">
+            <div class="shop-item-icon">${item.icon}</div>
+            <div class="shop-item-name">${item.name}</div>
+            <div class="shop-item-desc">${item.desc}</div>
+            <div class="shop-item-price">
+                <div class="shop-item-cost">✦ ${item.cost}</div>
+                <button class="shop-buy-btn" disabled>준비 중</button>
+            </div>
+        </div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   별 배경
+══════════════════════════════════════════════════════════════ */
+const sc=document.getElementById('stars'),sx=sc.getContext('2d');
+let starsArr=[];
+function initS(){sc.width=innerWidth;sc.height=innerHeight;starsArr=Array.from({length:100},()=>({x:Math.random()*sc.width,y:Math.random()*sc.height,r:Math.random()*1.1+.2,a:Math.random(),sp:Math.random()*.003+.001}));}
+function drawS(){sx.clearRect(0,0,sc.width,sc.height);starsArr.forEach(s=>{s.a+=s.sp;const al=(Math.sin(s.a)+1)/2*.65+.1;sx.beginPath();sx.arc(s.x,s.y,s.r,0,Math.PI*2);sx.fillStyle=`rgba(200,180,255,${al})`;sx.fill();});requestAnimationFrame(drawS);}
+window.addEventListener('resize',initS);initS();drawS();
+
+/* ══════════════════════════════════════════════════════════════
+   초기화
+══════════════════════════════════════════════════════════════ */
+window.addEventListener('load',async()=>{
+    await initDB();
+    buildPalette();
+
+    // API 키 복원
+    const savedKey=LS.g('axis_api_key','');
+    if(savedKey) document.getElementById('api-key').value=savedKey;
+    const savedModel=LS.g('axis_model','gpt-5-mini-2025-08-07');
+    document.getElementById('model-sel').value=savedModel;
+
+    // 루틴 초기화
+    await checkSettle();
+    setCoins(getCoins());
+    document.getElementById('pin-num').textContent=getTodayPIN();
+
+    // 초기 탭: 노트
+    document.body.classList.add('note-active');
+    await showNoteHome();
+});
 </script>
 </body>
 </html>
