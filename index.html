@@ -361,6 +361,21 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
 .gift-cost{font-size:12px;color:var(--pl);font-weight:700;}
 .gift-pw{font-size:10px;color:var(--w30);font-family:monospace;word-break:break-all;margin-top:6px;line-height:1.5;}
 .pw-box{background:var(--surface3);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:13px;color:var(--green);letter-spacing:.05em;word-break:break-all;margin-top:8px;line-height:1.6;}
+
+/* 루틴 맞교환 */
+.swap-badge{font-size:10px;padding:2px 8px;border-radius:100px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:var(--gold);font-weight:700;white-space:nowrap;}
+.swap-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);z-index:400;align-items:flex-end;justify-content:center;}
+.swap-modal.open{display:flex;}
+.swap-sheet{background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:24px 24px 0 0;padding:22px 20px 44px;width:100%;max-width:480px;animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);}
+.swap-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+.swap-item{padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface3);cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;transition:all .2s;display:flex;align-items:center;justify-content:space-between;}
+.swap-item:hover{border-color:var(--purple);background:var(--pdim);}
+.swap-item.active-swap{border-color:var(--gold);background:rgba(245,158,11,.1);}
+
+/* 루틴 수정 제한 배지 */
+.adjust-badge{font-size:9px;padding:1px 6px;border-radius:100px;background:rgba(248,246,255,.06);border:1px solid var(--border);color:var(--w30);font-weight:700;white-space:nowrap;flex-shrink:0;}
+.adjust-badge.warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:var(--gold);}
+.adjust-badge.lock{background:rgba(244,63,94,.1);border-color:rgba(244,63,94,.25);color:var(--red);}
 </style>
 </head>
 <body>
@@ -659,6 +674,19 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
         <div class="cert-title" id="cert-title"></div>
         <div class="cert-body" id="cert-body"></div>
         <button class="cert-close" onclick="closeCertModal()">확인</button>
+    </div>
+</div>
+
+<!-- 루틴 맞교환 모달 -->
+<div id="swap-modal" class="swap-modal">
+    <div class="swap-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" id="swap-title">루틴 맞교환</div>
+        <div class="sheet-sub" id="swap-sub">7일 한시적 교환 · 블럭 내 1개만 가능</div>
+        <div class="swap-list" id="swap-list"></div>
+        <div style="margin-top:14px;">
+            <button class="btn-cancel" onclick="closeSwapModal()" style="width:100%;">취소</button>
+        </div>
     </div>
 </div>
 
@@ -1622,14 +1650,7 @@ async function openSetup(){
     renderExisting();
 }
 function closeSetup(){document.getElementById('setup-screen').style.display='none';}
-async function saveSetup(){
-    if(!tempBlock.length){alert('루틴을 하나 이상 추가해주세요!');return;}
-    if(tempBlock.filter(r=>r.category==='입시').length<2){alert('입시 카테고리 루틴을 2개 이상 추가해주세요!');return;}
-    if(tempBlock.filter(r=>r.category==='건강').length<1){alert('건강 카테고리 루틴을 1개 이상 추가해주세요!');return;}
-    await setBlock(tempBlock);
-    if(!await getStartDate()) await setStartDate(todayKey());
-    closeSetup();render();
-}
+
 const ROUTINE_NAMES = {
     '입시': ['수학','영어','국어','사회','과학','한국사','토익','자격증공부'],
     '건강': ['러닝','조깅','인터벌','턱걸이','푸쉬업','스쿼트','플랭크','맨몸운동','수영','자전거','줄넘기','요가','스트레칭'],
@@ -1945,6 +1966,28 @@ function renderChecklist(block,todayChecks){
     const html=block.map((r,ri)=>{
         const cc=catColor[r.category]||'rgba(248,246,255,0.3)';
         const catBadge=`<span style="font-size:10px;padding:2px 7px;border-radius:100px;border:1px solid;color:${cc};border-color:${cc};opacity:.8;">${r.category}</span>`;
+
+        // 수정 제한 배지
+        const adj=r.adjustCount||0;
+        const adjBadge=adj>=2
+            ?`<span class="adjust-badge lock">🔒 수정불가</span>`
+            :adj===1
+            ?`<span class="adjust-badge warn">⚠ 수정 1회 남음</span>`
+            :``;
+
+        // 맞교환 상태
+        const swapInfo=getSwapInfo();
+        const isSwapped=swapInfo&&swapInfo.originalId===r.id;
+        const hasAnySwap=!!swapInfo;
+        const daysLeft=isSwapped?swapInfo.daysLeft:0;
+        const swapBadge=isSwapped?`<span class="swap-badge">🔄 교환중 ${daysLeft}일 남음</span>`:'';
+        const swapBtn=isSwapped
+            ?`<button class="verify-btn" style="font-size:10px;margin-left:4px;" onclick="cancelSwap()">↩ 되돌리기</button>`
+            :!hasAnySwap
+            ?`<button class="verify-btn" style="font-size:10px;margin-left:4px;" onclick="openSwapModal(${r.id})">🔄</button>`
+            :'';
+
+        const displayName=isSwapped?swapInfo.swapName:r.name;
         const stepsHtml=['min','base','bonus'].filter(g=>r.steps[g]).map((g,gi,arr)=>{
             const ck=r.id+'_'+g;
             const isDone=!!todayChecks[ck];
@@ -1961,7 +2004,16 @@ function renderChecklist(block,todayChecks){
             return (gi>0?'<span class="step-arrow">→</span>':'')
                 +`<div class="${bc}"><div class="step-dot ${DOTS[g]}"></div><span class="step-text">${r.steps[g].label}</span>${isDone?'<span class="step-check">✓</span>':''}${btnHtml}</div>`;
         }).join('');
-        return `<div class="routine-card" style="animation-delay:${ri*.06}s"><div class="rc-top"><div class="rc-name">${r.name}</div>${catBadge}</div><div class="rc-steps">${stepsHtml}</div></div>`;
+        return `<div class="routine-card" style="animation-delay:${ri*.06}s">
+            <div class="rc-top">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <div class="rc-name">${displayName}</div>
+                    ${swapBadge}${adjBadge}
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;">${catBadge}${swapBtn}</div>
+            </div>
+            <div class="rc-steps">${stepsHtml}</div>
+        </div>`;
     }).join('');
     document.getElementById('checklist-wrap').innerHTML=html+`<div style="display:flex;justify-content:flex-end;margin-top:8px;"><button class="edit-btn" onclick="openSetup()">⚙ 루틴 수정</button></div>`;
 }
@@ -2038,15 +2090,140 @@ async function buyGift(id){
     if(!gift) return;
     const coins=await getCoins();
     if(coins<gift.cost){showToast('코인이 부족해요!');return;}
-    const ok=await showConfirm('기프티콘 구매',`"${gift.name}"을 구매할까요?\n✦ ${gift.cost} 코인이 차감돼요.`);
+    const ok=await showConfirm('기프티콘 교환',`"${gift.name}"을 교환할까요?\n✦ ${gift.cost} 코인이 차감돼요.`);
     if(!ok) return;
     await setCoins(coins-gift.cost);
+    // 기프티콘 DB에서 삭제
+    const newGifts=gifts.filter(g=>g.id!==id);
+    await sbSet('axis_gifts',newGifts);
     // 암호 보여주기
-    document.getElementById('cert-title').textContent='🎁 구매 완료!';
+    document.getElementById('cert-title').textContent='🎁 교환 완료!';
     document.getElementById('cert-title').style.color='var(--green)';
-    document.getElementById('cert-body').textContent=`${gift.name}\n\n🔐 암호:\n${gift.pw}\n\n이 암호로 D드라이브 잠금을 해제하세요!`;
+    document.getElementById('cert-body').textContent=`${gift.name}\n\n🔐 암호:\n${gift.pw}\n\n이 암호로 D드라이브 잠금을 해제하세요!\n(이 창을 닫으면 다시 볼 수 없어요!)`;
     document.getElementById('cert-modal').classList.add('open');
     renderShop();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   루틴 수정 제한
+══════════════════════════════════════════════════════════════ */
+async function saveSetup(){
+    if(!tempBlock.length){alert('루틴을 하나 이상 추가해주세요!');return;}
+    if(tempBlock.filter(r=>r.category==='입시').length<2){alert('입시 카테고리 루틴을 2개 이상 추가해주세요!');return;}
+    if(tempBlock.filter(r=>r.category==='건강').length<1){alert('건강 카테고리 루틴을 1개 이상 추가해주세요!');return;}
+    const existing=await getBlock();
+    // 기존 루틴이 있으면 수정 제한 적용
+    tempBlock=tempBlock.map(r=>{
+        const orig=existing.find(e=>e.id===r.id);
+        if(!orig) {
+            // 새로 추가된 루틴 - originalNums 기록
+            const origNums={};
+            ['min','base','bonus'].forEach(g=>{
+                if(r.steps[g]){
+                    const m=r.steps[g].label.match(/^(\d+\.?\d*)/);
+                    origNums[g]=m?parseFloat(m[1]):null;
+                }
+            });
+            return {...r, originalNums, adjustCount:0};
+        }
+        // 기존 루틴 - 수정 제한 검증
+        if((orig.adjustCount||0)>=2){
+            // 수정 불가 - 원본 유지
+            return orig;
+        }
+        // 수정 가능 여부 확인 (하향만 가능)
+        let changed=false;
+        const newSteps={...r.steps};
+        ['min','base','bonus'].forEach(g=>{
+            if(!r.steps[g]||!orig.steps[g]) return;
+            const origNum=orig.originalNums?.[g];
+            if(origNum==null) return;
+            const m=r.steps[g].label.match(/^(\d+\.?\d*)/);
+            const newNum=m?parseFloat(m[1]):null;
+            if(newNum==null) return;
+            const minAllowed=Math.floor(origNum*Math.pow(0.9,orig.adjustCount||0)*10)/10;
+            if(newNum>origNum){
+                // 상향 불가 - 원본값으로 복구
+                newSteps[g]={label:orig.steps[g].label};
+            } else if(newNum<minAllowed){
+                showToast(`${r.name} ${g}: ${minAllowed} 미만으로 낮출 수 없어요!`);
+                newSteps[g]={label:orig.steps[g].label};
+            } else if(newNum!==parseFloat(orig.steps[g].label.match(/^(\d+\.?\d*)/)?.[1])){
+                changed=true;
+            }
+        });
+        const newAdjust=changed?(orig.adjustCount||0)+1:(orig.adjustCount||0);
+        return {...r, steps:newSteps, originalNums:orig.originalNums, adjustCount:newAdjust};
+    });
+    await setBlock(tempBlock);
+    if(!await getStartDate()) await setStartDate(todayKey());
+    closeSetup();render();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   루틴 맞교환
+══════════════════════════════════════════════════════════════ */
+function getSwapInfo(){
+    const swap=LS.g('axis_swap',null);
+    if(!swap) return null;
+    const today=new Date();today.setHours(0,0,0,0);
+    const startDate=new Date(swap.startDate);startDate.setHours(0,0,0,0);
+    const elapsed=Math.floor((today-startDate)/(1000*60*60*24));
+    const daysLeft=7-elapsed;
+    if(daysLeft<=0){
+        LS.s('axis_swap',null);
+        return null;
+    }
+    return {...swap,daysLeft};
+}
+
+let swapTargetId=null;
+
+async function openSwapModal(routineId){
+    const block=await getBlock();
+    const r=block.find(x=>x.id===routineId);
+    if(!r) return;
+    swapTargetId=routineId;
+    document.getElementById('swap-title').textContent=`"${r.name}" 맞교환`;
+    document.getElementById('swap-sub').textContent='교환할 루틴을 선택하세요 · 7일 후 자동 복구';
+    const others=block.filter(x=>x.id!==routineId);
+    document.getElementById('swap-list').innerHTML=others.map(x=>`
+        <div class="swap-item" onclick="confirmSwap(${x.id})">
+            <span>${x.name}</span>
+            <span style="font-size:11px;color:var(--w30);">${x.category}</span>
+        </div>`).join('');
+    document.getElementById('swap-modal').classList.add('open');
+}
+
+function closeSwapModal(){
+    document.getElementById('swap-modal').classList.remove('open');
+    swapTargetId=null;
+}
+
+async function confirmSwap(targetId){
+    closeSwapModal();
+    const block=await getBlock();
+    const orig=block.find(x=>x.id===swapTargetId);
+    const target=block.find(x=>x.id===targetId);
+    if(!orig||!target) return;
+    const ok=await showConfirm('루틴 맞교환',`"${orig.name}"을 "${target.name}"으로\n7일간 교환할까요?`);
+    if(!ok) return;
+    LS.s('axis_swap',{
+        originalId:swapTargetId,
+        originalName:orig.name,
+        swapName:target.name,
+        startDate:new Date().toISOString(),
+    });
+    showToast(`🔄 "${orig.name}" → "${target.name}" 교환됨 (7일)`,3000);
+    render();
+}
+
+async function cancelSwap(){
+    const ok=await showConfirm('교환 취소','루틴 교환을 취소하고 원래대로 되돌릴까요?');
+    if(!ok) return;
+    LS.s('axis_swap',null);
+    showToast('루틴이 원래대로 복구됐어요.');
+    render();
 }
 
 /* ══════════════════════════════════════════════════════════════
