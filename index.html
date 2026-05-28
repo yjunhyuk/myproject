@@ -329,6 +329,35 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
 /* 토스트 */
 #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,20,26,0.96);border:1px solid var(--border);color:var(--white);padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;pointer-events:none;opacity:0;transition:all .3s;z-index:500;white-space:nowrap;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* 1번 fix — 모바일 하단바 항상 보이게 */
+#note-canvas-view{display:none !important;flex-direction:column;}
+#note-canvas-view.active{display:flex !important;height:100%;}
+#note-main{flex:1;min-height:0;overflow-y:auto;overflow-x:auto;touch-action:pan-x pan-y;}
+#prob-nav{flex-shrink:0;position:relative;bottom:auto;}
+
+/* 개발자 모드 */
+#dev-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(18px);z-index:600;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px 60px;}
+#dev-modal.open{display:flex;}
+.dev-sheet{background:var(--surface2);border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:28px 24px;width:100%;max-width:560px;}
+.dev-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--pl);margin-bottom:4px;letter-spacing:-.02em;}
+.dev-sub{font-size:12px;color:var(--w30);margin-bottom:24px;}
+.dev-section{background:var(--surface3);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;}
+.dev-section-title{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--w30);margin-bottom:14px;}
+.dev-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.dev-label{font-size:12px;color:var(--w60);min-width:80px;flex-shrink:0;}
+.dev-inp{flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:12px;outline:none;font-family:'DM Sans',sans-serif;}
+.dev-inp:focus{border-color:var(--purple);}
+.dev-btn{padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--purple),var(--pl));color:#fff;cursor:pointer;font-size:12px;font-weight:700;font-family:'Syne',sans-serif;white-space:nowrap;transition:all .2s;}
+.dev-btn:hover{opacity:.85;}
+.dev-btn.danger{background:linear-gradient(135deg,#e53e3e,#f43f5e);}
+.dev-btn.secondary{background:var(--surface);border:1px solid var(--border);color:var(--w60);}
+.gift-item{display:flex;flex-direction:column;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;}
+.gift-item-top{display:flex;align-items:center;gap:8px;}
+.gift-name{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;flex:1;}
+.gift-cost{font-size:12px;color:var(--pl);font-weight:700;}
+.gift-pw{font-size:10px;color:var(--w30);font-family:monospace;word-break:break-all;margin-top:6px;line-height:1.5;}
+.pw-box{background:var(--surface3);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:13px;color:var(--green);letter-spacing:.05em;word-break:break-all;margin-top:8px;line-height:1.6;}
 </style>
 </head>
 <body>
@@ -343,8 +372,8 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
     <div class="header-right">
         <div class="coin-pill">✦ <span id="coin-num">0</span></div>
         <div id="pin-display" onclick="showPinInfo()">PIN: <span id="pin-num">----</span></div>
-        <button class="hdr-btn" onclick="openPromptSettings()">프롬프트</button>
-        <select id="model-sel" style="background:var(--surface3);border:1px solid var(--border);color:var(--w60);padding:6px 10px;border-radius:8px;font-size:12px;outline:none;flex-shrink:0;" onchange="LS.s('axis_model',this.value)">
+        <button class="hdr-btn" onclick="openDevMode()" style="border-color:rgba(124,58,237,.3);color:var(--pl);">⚙ DEV</button>
+        <select id="model-sel" style="background:var(--surface3);border:1px solid var(--border);color:var(--w60);padding:6px 10px;border-radius:8px;font-size:12px;outline:none;flex-shrink:0;" onchange="confirmModelChange(this)">
             <option value="gpt-5-mini-2025-08-07">GPT-5 mini</option>
             <option value="gpt-4.1-mini">GPT-4.1 mini</option>
         </select>
@@ -512,7 +541,7 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
             <div class="add-form-title">새 루틴 추가</div>
             <div class="field">
                 <label>카테고리</label>
-                <select id="inp-category">
+                <select id="inp-category" onchange="updateRoutineNames()">
                     <option value="입시">📚 입시</option>
                     <option value="건강">💪 건강</option>
                     <option value="서브스킬">⚡ 서브스킬</option>
@@ -521,14 +550,58 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
             </div>
             <div class="field">
                 <label>루틴 이름</label>
-                <input type="text" id="inp-name" placeholder="예) 수학, 영어, 달리기...">
+                <select id="inp-name">
+                    <option value="">선택하세요</option>
+                    <option>수학</option>
+                    <option>영어</option>
+                    <option>국어</option>
+                    <option>사회</option>
+                    <option>과학</option>
+                    <option>한국사</option>
+                </select>
             </div>
             <div class="field">
                 <label>등급별 목표</label>
                 <div class="grade-inputs">
-                    <div class="grade-row"><span class="grade-badge gb-min">🔴 최소</span><input type="text" id="inp-min" placeholder="예) 5문제, 15분..."></div>
-                    <div class="grade-row"><span class="grade-badge gb-base">🟡 기본</span><input type="text" id="inp-base" placeholder="예) 10문제, 30분..."></div>
-                    <div class="grade-row"><span class="grade-badge gb-bonus">🟢 보너스</span><input type="text" id="inp-bonus" placeholder="예) 30문제, 1시간..."></div>
+                    <div class="grade-row">
+                        <span class="grade-badge gb-min">🔴 최소</span>
+                        <input type="number" id="inp-min-num" min="1" max="999" placeholder="숫자" style="width:70px;">
+                        <select id="inp-min-unit" style="flex:1;">
+                            <option value="문제">문제</option>
+                            <option value="분">분</option>
+                            <option value="시간">시간</option>
+                            <option value="회">회</option>
+                            <option value="페이지">페이지</option>
+                            <option value="km">km</option>
+                            <option value="세트">세트</option>
+                        </select>
+                    </div>
+                    <div class="grade-row">
+                        <span class="grade-badge gb-base">🟡 기본</span>
+                        <input type="number" id="inp-base-num" min="1" max="999" placeholder="숫자" style="width:70px;">
+                        <select id="inp-base-unit" style="flex:1;">
+                            <option value="문제">문제</option>
+                            <option value="분">분</option>
+                            <option value="시간">시간</option>
+                            <option value="회">회</option>
+                            <option value="페이지">페이지</option>
+                            <option value="km">km</option>
+                            <option value="세트">세트</option>
+                        </select>
+                    </div>
+                    <div class="grade-row">
+                        <span class="grade-badge gb-bonus">🟢 보너스</span>
+                        <input type="number" id="inp-bonus-num" min="1" max="999" placeholder="숫자" style="width:70px;">
+                        <select id="inp-bonus-unit" style="flex:1;">
+                            <option value="문제">문제</option>
+                            <option value="분">분</option>
+                            <option value="시간">시간</option>
+                            <option value="회">회</option>
+                            <option value="페이지">페이지</option>
+                            <option value="km">km</option>
+                            <option value="세트">세트</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <button class="add-routine-btn" onclick="addRoutineItem()">＋ 루틴 추가</button>
@@ -584,6 +657,70 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
 
 <!-- 파일 인풋 -->
 <input type="file" id="verify-file-input" accept="image/*" style="display:none;" onchange="handlePhotoVerify(event)">
+
+<!-- 개발자 모드 모달 -->
+<div id="dev-modal">
+    <div class="dev-sheet">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+            <div class="dev-title">⚙ 개발자 모드</div>
+            <button onclick="closeDevMode()" style="background:none;border:none;color:var(--w30);font-size:20px;cursor:pointer;line-height:1;">×</button>
+        </div>
+        <div class="dev-sub">본인만 접근 가능한 관리 패널이에요.</div>
+
+        <!-- 코인 조정 -->
+        <div class="dev-section">
+            <div class="dev-section-title">코인 관리</div>
+            <div class="dev-row">
+                <div class="dev-label">현재 코인</div>
+                <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--pl);" id="dev-coin-display">0</div>
+            </div>
+            <div class="dev-row">
+                <input class="dev-inp" type="number" id="dev-coin-inp" placeholder="설정할 코인 수">
+                <button class="dev-btn" onclick="devSetCoins()">설정</button>
+            </div>
+        </div>
+
+        <!-- 기프티콘 관리 -->
+        <div class="dev-section">
+            <div class="dev-section-title">🎁 기프티콘 등록</div>
+            <div class="dev-row">
+                <input class="dev-inp" id="dev-gift-name" placeholder="기프티콘 이름 (예: 스타벅스 1만원)">
+            </div>
+            <div class="dev-row">
+                <input class="dev-inp" type="number" id="dev-gift-cost" placeholder="필요 코인 수">
+                <button class="dev-btn" onclick="devAddGift()">등록</button>
+            </div>
+            <div style="margin-top:4px;margin-bottom:10px;">
+                <button class="dev-btn secondary" onclick="devGenPassword()" style="width:100%;margin-bottom:6px;">🔐 30자리 암호 생성</button>
+                <div id="dev-pw-result" style="display:none;" class="pw-box"></div>
+            </div>
+            <div id="dev-gift-list"></div>
+        </div>
+
+        <!-- 데이터 초기화 -->
+        <div class="dev-section">
+            <div class="dev-section-title">데이터 관리</div>
+            <div class="dev-row" style="flex-wrap:wrap;gap:8px;">
+                <button class="dev-btn danger" onclick="devResetCoins()">코인 초기화</button>
+                <button class="dev-btn danger" onclick="devResetRoutines()">루틴 초기화</button>
+                <button class="dev-btn danger" onclick="devResetAll()">전체 초기화</button>
+            </div>
+        </div>
+
+        <!-- 프롬프트 설정 -->
+        <div class="dev-section">
+            <div class="dev-section-title">AI 프롬프트 설정</div>
+            <div style="font-size:10px;color:var(--w30);margin-bottom:8px;">기본 프롬프트 — 노트 인증</div>
+            <textarea id="base-prompt-note-edit" style="width:100%;min-height:100px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--w60);font-size:11px;outline:none;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.6;margin-bottom:10px;"></textarea>
+            <div style="font-size:10px;color:var(--w30);margin-bottom:8px;">기본 프롬프트 — 사진 인증</div>
+            <textarea id="base-prompt-photo-edit" style="width:100%;min-height:100px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--w60);font-size:11px;outline:none;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.6;margin-bottom:10px;"></textarea>
+            <div id="dev-prompt-fields"></div>
+            <button class="dev-btn" onclick="devSavePrompts()" style="width:100%;margin-top:4px;">프롬프트 저장</button>
+        </div>
+
+        <button class="dev-btn secondary" onclick="closeDevMode()" style="width:100%;margin-top:4px;">닫기</button>
+    </div>
+</div>
 
 <!-- 커스텀 Confirm 모달 -->
 <div id="confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);z-index:500;align-items:center;justify-content:center;">
@@ -1456,7 +1593,10 @@ async function doStamp(){
 let tempBlock=[];
 async function openSetup(){
     tempBlock=JSON.parse(JSON.stringify(await getBlock()));
-    ['inp-name','inp-min','inp-base','inp-bonus'].forEach(id=>document.getElementById(id).value='');
+    ['inp-min-num','inp-base-num','inp-bonus-num'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('inp-name').value='';
+    document.getElementById('inp-category').value='입시';
+    updateRoutineNames();
     document.getElementById('setup-screen').style.display='flex';
     renderExisting();
 }
@@ -1469,20 +1609,47 @@ async function saveSetup(){
     if(!await getStartDate()) await setStartDate(todayKey());
     closeSetup();render();
 }
+const ROUTINE_NAMES = {
+    '입시': ['수학','영어','국어','사회','과학','한국사','토익','자격증공부'],
+    '건강': ['러닝','조깅','인터벌','턱걸이','푸쉬업','스쿼트','플랭크','맨몸운동','수영','자전거','줄넘기','요가','스트레칭'],
+    '서브스킬': ['코딩','AI공부','독서','PC조립공부','강의시청','블로그작성','포트폴리오'],
+    '기타': ['명상','일기쓰기','정리정돈','기타'],
+};
+
+function updateRoutineNames(){
+    const cat=document.getElementById('inp-category').value;
+    const names=ROUTINE_NAMES[cat]||[];
+    const sel=document.getElementById('inp-name');
+    sel.innerHTML='<option value="">선택하세요</option>'+names.map(n=>`<option>${n}</option>`).join('');
+}
+
 function addRoutineItem(){
-    const name=document.getElementById('inp-name').value.trim();
-    const minV=document.getElementById('inp-min').value.trim();
-    const baseV=document.getElementById('inp-base').value.trim();
-    const bonusV=document.getElementById('inp-bonus').value.trim();
+    const name=document.getElementById('inp-name').value;
+    if(!name){showToast('루틴 이름을 선택해주세요!');return;}
+    const minNum=document.getElementById('inp-min-num').value;
+    const baseNum=document.getElementById('inp-base-num').value;
+    const bonusNum=document.getElementById('inp-bonus-num').value;
+    if(!minNum&&!baseNum&&!bonusNum){showToast('최소 하나의 목표를 입력해주세요!');return;}
+    const mkLabel=(num,unitId)=>{
+        if(!num) return null;
+        const unit=document.getElementById(unitId).value;
+        return `${num}${unit}`;
+    };
+    const minV=mkLabel(minNum,'inp-min-unit');
+    const baseV=mkLabel(baseNum,'inp-base-unit');
+    const bonusV=mkLabel(bonusNum,'inp-bonus-unit');
+    // 최소 < 기본 < 보너스 검증
+    if(minNum&&baseNum&&Number(minNum)>=Number(baseNum)){showToast('기본이 최소보다 커야해요!');return;}
+    if(baseNum&&bonusNum&&Number(baseNum)>=Number(bonusNum)){showToast('보너스가 기본보다 커야해요!');return;}
+    if(minNum&&bonusNum&&!baseNum&&Number(minNum)>=Number(bonusNum)){showToast('보너스가 최소보다 커야해요!');return;}
     const category=document.getElementById('inp-category').value;
-    if(!name){alert('루틴 이름을 입력해주세요!');return;}
-    if(!minV&&!baseV&&!bonusV){alert('최소 하나의 목표를 입력해주세요!');return;}
     tempBlock.push({id:Date.now(),name,category,steps:{
         min:  minV  ?{label:minV}  :null,
         base: baseV ?{label:baseV} :null,
         bonus:bonusV?{label:bonusV}:null,
     }});
-    ['inp-name','inp-min','inp-base','inp-bonus'].forEach(id=>document.getElementById(id).value='');
+    ['inp-min-num','inp-base-num','inp-bonus-num'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('inp-name').value='';
     renderExisting();
 }
 function delSetupItem(id){tempBlock=tempBlock.filter(x=>x.id!==id);renderExisting();}
@@ -1813,8 +1980,20 @@ const SHOP_ITEMS=[
 ];
 async function renderShop(){
     await setCoins(await getCoins());
-    document.getElementById('shop-grid').innerHTML=SHOP_ITEMS.map((item,i)=>`
+    const coins=await getCoins();
+    const gifts=await sbGet('axis_gifts',[]);
+    const giftHtml=gifts.length?gifts.map((g,i)=>`
         <div class="shop-item" style="animation-delay:${i*.06}s">
+            <div class="shop-item-icon">🎁</div>
+            <div class="shop-item-name">${g.name}</div>
+            <div class="shop-item-desc">코인을 모아 암호를 획득하세요!</div>
+            <div class="shop-item-price">
+                <div class="shop-item-cost">✦ ${g.cost}</div>
+                <button class="shop-buy-btn" ${coins<g.cost?'disabled':''} onclick="buyGift(${g.id})">${coins<g.cost?'코인 부족':'구매'}</button>
+            </div>
+        </div>`).join(''):'';
+    const defaultItems=SHOP_ITEMS.map((item,i)=>`
+        <div class="shop-item" style="animation-delay:${(gifts.length+i)*.06}s">
             <div class="shop-item-icon">${item.icon}</div>
             <div class="shop-item-name">${item.name}</div>
             <div class="shop-item-desc">${item.desc}</div>
@@ -1823,6 +2002,24 @@ async function renderShop(){
                 <button class="shop-buy-btn" disabled>준비 중</button>
             </div>
         </div>`).join('');
+    document.getElementById('shop-grid').innerHTML=giftHtml+defaultItems;
+}
+
+async function buyGift(id){
+    const gifts=await sbGet('axis_gifts',[]);
+    const gift=gifts.find(g=>g.id===id);
+    if(!gift) return;
+    const coins=await getCoins();
+    if(coins<gift.cost){showToast('코인이 부족해요!');return;}
+    const ok=await showConfirm('기프티콘 구매',`"${gift.name}"을 구매할까요?\n✦ ${gift.cost} 코인이 차감돼요.`);
+    if(!ok) return;
+    await setCoins(coins-gift.cost);
+    // 암호 보여주기
+    document.getElementById('cert-title').textContent='🎁 구매 완료!';
+    document.getElementById('cert-title').style.color='var(--green)';
+    document.getElementById('cert-body').textContent=`${gift.name}\n\n🔐 암호:\n${gift.pw}\n\n이 암호로 D드라이브 잠금을 해제하세요!`;
+    document.getElementById('cert-modal').classList.add('open');
+    renderShop();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1837,6 +2034,146 @@ window.addEventListener('resize',initS);initS();drawS();
 /* ══════════════════════════════════════════════════════════════
    초기화
 ══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   2번 — 모델 변경 팝업
+══════════════════════════════════════════════════════════════ */
+async function confirmModelChange(sel){
+    const newModel=sel.value;
+    const label=sel.options[sel.selectedIndex].text;
+    const ok=await showConfirm('모델 변경',`${label} 모델로 변경할까요?`);
+    if(ok){
+        LS.s('axis_model',newModel);
+        showToast(`✦ ${label} 모델로 변경됨`);
+    } else {
+        // 원래 값으로 복원
+        sel.value=LS.g('axis_model','gpt-5-mini-2025-08-07');
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   개발자 모드
+══════════════════════════════════════════════════════════════ */
+const DEV_PASSWORD = 'axis2025dev';
+
+async function openDevMode(){
+    const pw=prompt('개발자 비밀번호를 입력하세요:');
+    if(pw!==DEV_PASSWORD){showToast('❌ 비밀번호가 틀렸어요.');return;}
+    document.getElementById('dev-modal').classList.add('open');
+    const coins=await getCoins();
+    document.getElementById('dev-coin-display').textContent=coins;
+    document.getElementById('dev-coin-inp').value='';
+    document.getElementById('dev-pw-result').style.display='none';
+    // 프롬프트 로딩
+    document.getElementById('base-prompt-note-edit').value=LS.g('axis_base_prompt_note',BASE_PROMPT_NOTE);
+    document.getElementById('base-prompt-photo-edit').value=LS.g('axis_base_prompt_photo',BASE_PROMPT_PHOTO);
+    const block=await getBlock(),customs=getCustomPrompts();
+    document.getElementById('dev-prompt-fields').innerHTML=block.length
+        ?block.map(r=>`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--w60);margin-bottom:5px;">${r.name} <span style="font-weight:400;color:var(--w30);font-size:10px;">(${r.category})</span></div><textarea data-routine="${r.name}" style="width:100%;min-height:60px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:11px;outline:none;font-family:'DM Sans',sans-serif;resize:vertical;" placeholder="추가 판단 기준 (선택사항)">${customs[r.name]||''}</textarea></div>`).join('')
+        :'';
+    await devRenderGifts();
+}
+
+function devSavePrompts(){
+    LS.s('axis_base_prompt_note', document.getElementById('base-prompt-note-edit').value.trim()||BASE_PROMPT_NOTE);
+    LS.s('axis_base_prompt_photo', document.getElementById('base-prompt-photo-edit').value.trim()||BASE_PROMPT_PHOTO);
+    const customs={};
+    document.querySelectorAll('[data-routine]').forEach(el=>{const v=el.value.trim();if(v)customs[el.dataset.routine]=v;});
+    setCustomPrompts(customs);
+    showToast('✦ 프롬프트 저장됨');
+}
+function closeDevMode(){document.getElementById('dev-modal').classList.remove('open');}
+
+async function devSetCoins(){
+    const v=parseInt(document.getElementById('dev-coin-inp').value);
+    if(isNaN(v)){showToast('숫자를 입력해주세요!');return;}
+    await setCoins(v);
+    document.getElementById('dev-coin-display').textContent=v;
+    showToast(`✦ 코인 ${v}개로 설정됨`);
+}
+
+// 30자리 암호 생성기
+function devGenPassword(){
+    const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+    let pw='';
+    const arr=new Uint8Array(30);
+    crypto.getRandomValues(arr);
+    arr.forEach(b=>pw+=chars[b%chars.length]);
+    document.getElementById('dev-pw-result').textContent=pw;
+    document.getElementById('dev-pw-result').style.display='block';
+    // 클립보드 복사
+    navigator.clipboard?.writeText(pw).then(()=>showToast('🔐 암호 생성 & 클립보드 복사됨!',3000));
+    return pw;
+}
+
+// 기프티콘 등록/조회/삭제
+async function devAddGift(){
+    const name=document.getElementById('dev-gift-name').value.trim();
+    const cost=parseInt(document.getElementById('dev-gift-cost').value);
+    if(!name){showToast('이름을 입력해주세요!');return;}
+    if(isNaN(cost)||cost<=0){showToast('코인 수를 입력해주세요!');return;}
+    const pwEl=document.getElementById('dev-pw-result');
+    const pw=pwEl.style.display!=='none'?pwEl.textContent:'';
+    if(!pw){showToast('먼저 암호를 생성해주세요!');return;}
+    const gifts=await sbGet('axis_gifts',[]);
+    gifts.push({id:Date.now(),name,cost,pw});
+    await sbSet('axis_gifts',gifts);
+    document.getElementById('dev-gift-name').value='';
+    document.getElementById('dev-gift-cost').value='';
+    document.getElementById('dev-pw-result').style.display='none';
+    showToast(`🎁 "${name}" 등록됨!`);
+    await devRenderGifts();
+    renderShop();
+}
+
+async function devRenderGifts(){
+    const gifts=await sbGet('axis_gifts',[]);
+    const el=document.getElementById('dev-gift-list');
+    if(!gifts.length){el.innerHTML='<div style="font-size:12px;color:var(--w30);text-align:center;padding:10px 0;">등록된 기프티콘이 없어요.</div>';return;}
+    el.innerHTML=gifts.map(g=>`
+        <div class="gift-item">
+            <div class="gift-item-top">
+                <div class="gift-name">🎁 ${g.name}</div>
+                <div class="gift-cost">✦ ${g.cost}</div>
+                <button onclick="devDeleteGift(${g.id})" style="background:none;border:none;color:var(--w30);cursor:pointer;font-size:15px;line-height:1;">×</button>
+            </div>
+            <div class="gift-pw">암호: ${g.pw}</div>
+        </div>`).join('');
+}
+
+async function devDeleteGift(id){
+    const ok=await showConfirm('기프티콘 삭제','이 기프티콘을 삭제할까요?');
+    if(!ok) return;
+    const gifts=(await sbGet('axis_gifts',[])).filter(g=>g.id!==id);
+    await sbSet('axis_gifts',gifts);
+    await devRenderGifts();
+    renderShop();
+    showToast('기프티콘 삭제됨');
+}
+
+async function devResetCoins(){
+    const ok=await showConfirm('코인 초기화','코인을 0으로 초기화할까요?');
+    if(!ok) return;
+    await setCoins(0);
+    document.getElementById('dev-coin-display').textContent=0;
+    showToast('코인 초기화됨');
+}
+async function devResetRoutines(){
+    const ok=await showConfirm('루틴 초기화','루틴 데이터를 전부 초기화할까요?');
+    if(!ok) return;
+    await setBlock([]);await setChecks({});await setStartDate(null);
+    _cache={};
+    showToast('루틴 초기화됨');
+}
+async function devResetAll(){
+    const ok=await showConfirm('전체 초기화','모든 데이터를 초기화할까요? 되돌릴 수 없어요!');
+    if(!ok) return;
+    await supa.from('routines').delete().neq('id',0);
+    await dbDeleteAll();
+    _cache={};
+    showToast('전체 초기화됨');
+    location.reload();
+}
+
 window.addEventListener('load',async()=>{
     buildPalette();
 
