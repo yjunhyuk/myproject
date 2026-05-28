@@ -362,17 +362,29 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
 .gift-pw{font-size:10px;color:var(--w30);font-family:monospace;word-break:break-all;margin-top:6px;line-height:1.5;}
 .pw-box{background:var(--surface3);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:13px;color:var(--green);letter-spacing:.05em;word-break:break-all;margin-top:8px;line-height:1.6;}
 
-/* 루틴 맞교환 */
-.swap-badge{font-size:10px;padding:2px 8px;border-radius:100px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:var(--gold);font-weight:700;white-space:nowrap;}
-.swap-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);z-index:400;align-items:flex-end;justify-content:center;}
-.swap-modal.open{display:flex;}
-.swap-sheet{background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:24px 24px 0 0;padding:22px 20px 44px;width:100%;max-width:480px;animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);}
-.swap-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
-.swap-item{padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface3);cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;transition:all .2s;display:flex;align-items:center;justify-content:space-between;}
-.swap-item:hover{border-color:var(--purple);background:var(--pdim);}
-.swap-item.active-swap{border-color:var(--gold);background:rgba(245,158,11,.1);}
+/* 루틴 정지 */
+.pause-badge{font-size:10px;padding:2px 8px;border-radius:100px;background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);color:var(--red);font-weight:700;white-space:nowrap;}
+.pause-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);z-index:400;align-items:flex-end;justify-content:center;}
+.pause-modal.open{display:flex;}
+.pause-sheet{background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:24px 24px 0 0;padding:22px 20px 44px;width:100%;max-width:480px;animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);max-height:88vh;overflow-y:auto;}
+.pause-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface3);margin-bottom:8px;cursor:pointer;transition:all .2s;}
+.pause-item.checked{border-color:rgba(244,63,94,.4);background:rgba(244,63,94,.08);}
+.pause-item-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+.pause-item.checked .pause-item-check{background:var(--red);border-color:var(--red);color:#fff;font-size:12px;}
+.pause-item-name{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;flex:1;}
+.pause-item-cat{font-size:11px;color:var(--w30);}
+.pause-days-left{font-size:11px;color:var(--red);font-weight:700;}
 
-/* 루틴 수정 제한 배지 */
+/* 루틴 강도 조절 */
+.adjust-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);z-index:400;align-items:flex-end;justify-content:center;}
+.adjust-modal.open{display:flex;}
+.adjust-sheet{background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:24px 24px 0 0;padding:22px 20px 44px;width:100%;max-width:480px;animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);max-height:88vh;overflow-y:auto;}
+.adjust-row{margin-bottom:18px;}
+.adjust-label{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--w60);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.adjust-val{color:var(--pl);}
+.adjust-slider{width:100%;-webkit-appearance:none;height:6px;border-radius:100px;background:var(--surface3);outline:none;cursor:pointer;}
+.adjust-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--pl));cursor:pointer;box-shadow:0 2px 8px var(--pglow);}
+.adjust-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--pl));cursor:pointer;border:none;}
 .adjust-badge{font-size:9px;padding:1px 6px;border-radius:100px;background:rgba(248,246,255,.06);border:1px solid var(--border);color:var(--w30);font-weight:700;white-space:nowrap;flex-shrink:0;}
 .adjust-badge.warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:var(--gold);}
 .adjust-badge.lock{background:rgba(244,63,94,.1);border-color:rgba(244,63,94,.25);color:var(--red);}
@@ -678,14 +690,30 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
 </div>
 
 <!-- 루틴 맞교환 모달 -->
-<div id="swap-modal" class="swap-modal">
-    <div class="swap-sheet">
+<!-- 루틴 정지 모달 -->
+<div id="pause-modal" class="pause-modal">
+    <div class="pause-sheet">
         <div class="sheet-handle"></div>
-        <div class="sheet-title" id="swap-title">루틴 맞교환</div>
-        <div class="sheet-sub" id="swap-sub">7일 한시적 교환 · 블럭 내 1개만 가능</div>
-        <div class="swap-list" id="swap-list"></div>
-        <div style="margin-top:14px;">
-            <button class="btn-cancel" onclick="closeSwapModal()" style="width:100%;">취소</button>
+        <div class="sheet-title">⏸ 루틴 정지</div>
+        <div class="sheet-sub">정지할 루틴을 선택하세요 · 남은 정지 일수: <span id="pause-days-left-disp" style="color:var(--red);font-weight:700;">5일</span></div>
+        <div id="pause-list" style="margin-top:14px;"></div>
+        <div style="margin-top:14px;display:flex;gap:10px;">
+            <button class="btn-cancel" onclick="closePauseModal()" style="flex:1;">취소</button>
+            <button class="btn-confirm" onclick="confirmPause()" style="flex:2;">정지 적용</button>
+        </div>
+    </div>
+</div>
+
+<!-- 루틴 강도 조절 모달 -->
+<div id="adjust-modal" class="adjust-modal">
+    <div class="adjust-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" id="adjust-title">강도 조절</div>
+        <div class="sheet-sub" id="adjust-sub"></div>
+        <div id="adjust-sliders" style="margin-top:18px;"></div>
+        <div style="margin-top:14px;display:flex;gap:10px;">
+            <button class="btn-cancel" onclick="closeAdjustModal()" style="flex:1;">취소</button>
+            <button class="btn-confirm" onclick="confirmAdjust()" style="flex:2;">적용</button>
         </div>
     </div>
 </div>
@@ -1650,7 +1678,14 @@ async function openSetup(){
     renderExisting();
 }
 function closeSetup(){document.getElementById('setup-screen').style.display='none';}
-
+async function saveSetup(){
+    if(!tempBlock.length){alert('루틴을 하나 이상 추가해주세요!');return;}
+    if(tempBlock.filter(r=>r.category==='입시').length<2){alert('입시 카테고리 루틴을 2개 이상 추가해주세요!');return;}
+    if(tempBlock.filter(r=>r.category==='건강').length<1){alert('건강 카테고리 루틴을 1개 이상 추가해주세요!');return;}
+    await setBlock(tempBlock);
+    if(!await getStartDate()) await setStartDate(todayKey());
+    closeSetup();render();
+}
 const ROUTINE_NAMES = {
     '입시': ['수학','영어','국어','사회','과학','한국사','토익','자격증공부'],
     '건강': ['러닝','조깅','인터벌','턱걸이','푸쉬업','스쿼트','플랭크','맨몸운동','수영','자전거','줄넘기','요가','스트레칭'],
@@ -1967,31 +2002,28 @@ function renderChecklist(block,todayChecks){
         const cc=catColor[r.category]||'rgba(248,246,255,0.3)';
         const catBadge=`<span style="font-size:10px;padding:2px 7px;border-radius:100px;border:1px solid;color:${cc};border-color:${cc};opacity:.8;">${r.category}</span>`;
 
-        // 수정 제한 배지
+        // 강도 조절 배지
         const adj=r.adjustCount||0;
         const adjBadge=adj>=2
-            ?`<span class="adjust-badge lock">🔒 수정불가</span>`
+            ?`<span class="adjust-badge lock">🔒 강도고정</span>`
             :adj===1
-            ?`<span class="adjust-badge warn">⚠ 수정 1회 남음</span>`
+            ?`<span class="adjust-badge warn">⚡ 강도조절 1회 남음</span>`
             :``;
 
-        // 맞교환 상태
-        const swapInfo=getSwapInfo();
-        const isSwapped=swapInfo&&swapInfo.originalId===r.id;
-        const hasAnySwap=!!swapInfo;
-        const daysLeft=isSwapped?swapInfo.daysLeft:0;
-        const swapBadge=isSwapped?`<span class="swap-badge">🔄 교환중 ${daysLeft}일 남음</span>`:'';
-        const swapBtn=isSwapped
-            ?`<button class="verify-btn" style="font-size:10px;margin-left:4px;" onclick="cancelSwap()">↩ 되돌리기</button>`
-            :!hasAnySwap
-            ?`<button class="verify-btn" style="font-size:10px;margin-left:4px;" onclick="openSwapModal(${r.id})">🔄</button>`
-            :'';
+        // 정지 상태
+        const pauseData=getPauseData();
+        const isPaused=pauseData&&pauseData.ids&&pauseData.ids.includes(r.id);
+        const pauseBadge=isPaused?`<span class="pause-badge">⏸ 정지중</span>`:'';
 
-        const displayName=isSwapped?swapInfo.swapName:r.name;
         const stepsHtml=['min','base','bonus'].filter(g=>r.steps[g]).map((g,gi,arr)=>{
             const ck=r.id+'_'+g;
             const isDone=!!todayChecks[ck];
             const isLocked=arr.slice(0,gi).some(pg=>!todayChecks[r.id+'_'+pg]);
+            // 정지된 루틴은 인증 불가
+            if(isPaused){
+                return (gi>0?'<span class="step-arrow">→</span>':'')
+                    +`<div class="step-block locked"><div class="step-dot ${DOTS[g]}"></div><span class="step-text">${r.steps[g].label}</span><button class="verify-btn" style="opacity:.3;cursor:not-allowed;">⏸</button></div>`;
+            }
             let btnHtml;
             if(isDone){
                 btnHtml=`<button class="verify-btn done-v" data-vkey="${ck}">✓ 완료</button><button class="verify-btn" style="margin-left:3px;font-size:10px;" onclick="startReverify(${r.id},'${g}')">↩</button>`;
@@ -2004,18 +2036,33 @@ function renderChecklist(block,todayChecks){
             return (gi>0?'<span class="step-arrow">→</span>':'')
                 +`<div class="${bc}"><div class="step-dot ${DOTS[g]}"></div><span class="step-text">${r.steps[g].label}</span>${isDone?'<span class="step-check">✓</span>':''}${btnHtml}</div>`;
         }).join('');
-        return `<div class="routine-card" style="animation-delay:${ri*.06}s">
+
+        // 강도조절 버튼 (최대 2개 루틴만, 잠기면 숨김)
+        const adjustedCount=(block.filter(x=>(x.adjustCount||0)>0).length);
+        const canShowAdjust=adj<2&&(adjustedCount<2||(r.adjustCount||0)>0);
+        const adjustBtn=canShowAdjust
+            ?`<button class="verify-btn" style="font-size:10px;" onclick="openAdjustModal(${r.id})">📊 강도</button>`
+            :'';
+
+        return `<div class="routine-card${isPaused?' opacity-50':''}" style="animation-delay:${ri*.06}s;${isPaused?'opacity:.5;':''}">
             <div class="rc-top">
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                    <div class="rc-name">${displayName}</div>
-                    ${swapBadge}${adjBadge}
+                    <div class="rc-name">${r.name}</div>
+                    ${pauseBadge}${adjBadge}
                 </div>
-                <div style="display:flex;align-items:center;gap:4px;">${catBadge}${swapBtn}</div>
+                <div style="display:flex;align-items:center;gap:4px;">${catBadge}${adjustBtn}</div>
             </div>
             <div class="rc-steps">${stepsHtml}</div>
         </div>`;
     }).join('');
-    document.getElementById('checklist-wrap').innerHTML=html+`<div style="display:flex;justify-content:flex-end;margin-top:8px;"><button class="edit-btn" onclick="openSetup()">⚙ 루틴 수정</button></div>`;
+    const pauseData=getPauseData();
+    const daysLeft=LS.g('axis_pause_remain',5);
+    const pauseBtn=pauseData
+        ?`<button class="edit-btn" onclick="openPauseModal()" style="color:var(--red);border-color:rgba(244,63,94,.3);">⏸ 정지 관리</button>`
+        :daysLeft>0
+        ?`<button class="edit-btn" onclick="openPauseModal()">⏸ 루틴 정지 (${daysLeft}일)</button>`
+        :`<button class="edit-btn" style="opacity:.4;cursor:not-allowed;">⏸ 정지 소진</button>`;
+    document.getElementById('checklist-wrap').innerHTML=html+`<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">${pauseBtn}<button class="edit-btn" onclick="openSetup()">⚙ 루틴 수정</button></div>`;
 }
 
 async function renderDayGrid(block,checks){
@@ -2105,124 +2152,146 @@ async function buyGift(id){
 }
 
 /* ══════════════════════════════════════════════════════════════
-   루틴 수정 제한
+   루틴 정지
 ══════════════════════════════════════════════════════════════ */
-async function saveSetup(){
-    if(!tempBlock.length){alert('루틴을 하나 이상 추가해주세요!');return;}
-    if(tempBlock.filter(r=>r.category==='입시').length<2){alert('입시 카테고리 루틴을 2개 이상 추가해주세요!');return;}
-    if(tempBlock.filter(r=>r.category==='건강').length<1){alert('건강 카테고리 루틴을 1개 이상 추가해주세요!');return;}
-    const existing=await getBlock();
-    // 기존 루틴이 있으면 수정 제한 적용
-    tempBlock=tempBlock.map(r=>{
-        const orig=existing.find(e=>e.id===r.id);
-        if(!orig) {
-            // 새로 추가된 루틴 - originalNums 기록
-            const origNums={};
-            ['min','base','bonus'].forEach(g=>{
-                if(r.steps[g]){
-                    const m=r.steps[g].label.match(/^(\d+\.?\d*)/);
-                    origNums[g]=m?parseFloat(m[1]):null;
-                }
-            });
-            return {...r, originalNums, adjustCount:0};
-        }
-        // 기존 루틴 - 수정 제한 검증
-        if((orig.adjustCount||0)>=2){
-            // 수정 불가 - 원본 유지
-            return orig;
-        }
-        // 수정 가능 여부 확인 (하향만 가능)
-        let changed=false;
-        const newSteps={...r.steps};
-        ['min','base','bonus'].forEach(g=>{
-            if(!r.steps[g]||!orig.steps[g]) return;
-            const origNum=orig.originalNums?.[g];
-            if(origNum==null) return;
-            const m=r.steps[g].label.match(/^(\d+\.?\d*)/);
-            const newNum=m?parseFloat(m[1]):null;
-            if(newNum==null) return;
-            const minAllowed=Math.floor(origNum*Math.pow(0.9,orig.adjustCount||0)*10)/10;
-            if(newNum>origNum){
-                // 상향 불가 - 원본값으로 복구
-                newSteps[g]={label:orig.steps[g].label};
-            } else if(newNum<minAllowed){
-                showToast(`${r.name} ${g}: ${minAllowed} 미만으로 낮출 수 없어요!`);
-                newSteps[g]={label:orig.steps[g].label};
-            } else if(newNum!==parseFloat(orig.steps[g].label.match(/^(\d+\.?\d*)/)?.[1])){
-                changed=true;
-            }
-        });
-        const newAdjust=changed?(orig.adjustCount||0)+1:(orig.adjustCount||0);
-        return {...r, steps:newSteps, originalNums:orig.originalNums, adjustCount:newAdjust};
-    });
-    await setBlock(tempBlock);
-    if(!await getStartDate()) await setStartDate(todayKey());
-    closeSetup();render();
-}
-
-/* ══════════════════════════════════════════════════════════════
-   루틴 맞교환
-══════════════════════════════════════════════════════════════ */
-function getSwapInfo(){
-    const swap=LS.g('axis_swap',null);
-    if(!swap) return null;
+function getPauseData(){
+    const p=LS.g('axis_pause',null);
+    if(!p) return null;
     const today=new Date();today.setHours(0,0,0,0);
-    const startDate=new Date(swap.startDate);startDate.setHours(0,0,0,0);
-    const elapsed=Math.floor((today-startDate)/(1000*60*60*24));
-    const daysLeft=7-elapsed;
-    if(daysLeft<=0){
-        LS.s('axis_swap',null);
-        return null;
-    }
-    return {...swap,daysLeft};
+    const end=new Date(p.endDate);end.setHours(0,0,0,0);
+    if(today>end){LS.s('axis_pause',null);return null;}
+    return p;
 }
 
-let swapTargetId=null;
+let pauseChecked=new Set();
 
-async function openSwapModal(routineId){
+async function openPauseModal(){
     const block=await getBlock();
-    const r=block.find(x=>x.id===routineId);
-    if(!r) return;
-    swapTargetId=routineId;
-    document.getElementById('swap-title').textContent=`"${r.name}" 맞교환`;
-    document.getElementById('swap-sub').textContent='교환할 루틴을 선택하세요 · 7일 후 자동 복구';
-    const others=block.filter(x=>x.id!==routineId);
-    document.getElementById('swap-list').innerHTML=others.map(x=>`
-        <div class="swap-item" onclick="confirmSwap(${x.id})">
-            <span>${x.name}</span>
-            <span style="font-size:11px;color:var(--w30);">${x.category}</span>
+    const pauseData=getPauseData();
+    const daysLeft=LS.g('axis_pause_remain',5);
+    pauseChecked=new Set(pauseData?pauseData.ids:[]);
+    document.getElementById('pause-days-left-disp').textContent=daysLeft+'일';
+    document.getElementById('pause-list').innerHTML=block.map(r=>`
+        <div class="pause-item${pauseChecked.has(r.id)?' checked':''}" id="pause-item-${r.id}" onclick="togglePauseItem(${r.id})">
+            <div class="pause-item-check">${pauseChecked.has(r.id)?'✓':''}</div>
+            <div class="pause-item-name">${r.name}</div>
+            <div class="pause-item-cat">${r.category}</div>
         </div>`).join('');
-    document.getElementById('swap-modal').classList.add('open');
+    document.getElementById('pause-modal').classList.add('open');
+}
+function closePauseModal(){document.getElementById('pause-modal').classList.remove('open');}
+
+function togglePauseItem(id){
+    const el=document.getElementById(`pause-item-${id}`);
+    if(pauseChecked.has(id)){
+        pauseChecked.delete(id);
+        el.classList.remove('checked');
+        el.querySelector('.pause-item-check').textContent='';
+    } else {
+        pauseChecked.add(id);
+        el.classList.add('checked');
+        el.querySelector('.pause-item-check').textContent='✓';
+    }
 }
 
-function closeSwapModal(){
-    document.getElementById('swap-modal').classList.remove('open');
-    swapTargetId=null;
-}
-
-async function confirmSwap(targetId){
-    closeSwapModal();
-    const block=await getBlock();
-    const orig=block.find(x=>x.id===swapTargetId);
-    const target=block.find(x=>x.id===targetId);
-    if(!orig||!target) return;
-    const ok=await showConfirm('루틴 맞교환',`"${orig.name}"을 "${target.name}"으로\n7일간 교환할까요?`);
-    if(!ok) return;
-    LS.s('axis_swap',{
-        originalId:swapTargetId,
-        originalName:orig.name,
-        swapName:target.name,
-        startDate:new Date().toISOString(),
-    });
-    showToast(`🔄 "${orig.name}" → "${target.name}" 교환됨 (7일)`,3000);
+async function confirmPause(){
+    if(pauseChecked.size===0){
+        // 정지 해제
+        LS.s('axis_pause',null);
+        closePauseModal();
+        showToast('루틴 정지 해제됨');
+        render();return;
+    }
+    const daysLeft=LS.g('axis_pause_remain',5);
+    if(daysLeft<=0){showToast('남은 정지 일수가 없어요!');return;}
+    const endDate=new Date();
+    endDate.setDate(endDate.getDate()+1);
+    LS.s('axis_pause',{ids:Array.from(pauseChecked),endDate:endDate.toISOString()});
+    LS.s('axis_pause_remain',daysLeft-1);
+    closePauseModal();
+    const allBlock=await getBlock();
+    const isAll=pauseChecked.size===allBlock.length;
+    showToast(isAll?'⏸ 비상정지! 내일 자동 해제됩니다.':`⏸ ${pauseChecked.size}개 루틴 정지. 남은 일수: ${daysLeft-1}일`,3000);
     render();
 }
 
-async function cancelSwap(){
-    const ok=await showConfirm('교환 취소','루틴 교환을 취소하고 원래대로 되돌릴까요?');
-    if(!ok) return;
-    LS.s('axis_swap',null);
-    showToast('루틴이 원래대로 복구됐어요.');
+/* ══════════════════════════════════════════════════════════════
+   루틴 강도 조절 (슬라이더)
+══════════════════════════════════════════════════════════════ */
+let adjustTargetId=null;
+let adjustValues={};
+
+async function openAdjustModal(routineId){
+    const block=await getBlock();
+    const r=block.find(x=>x.id===routineId);
+    if(!r) return;
+    adjustTargetId=routineId;
+    adjustValues={};
+    const adj=r.adjustCount||0;
+    document.getElementById('adjust-title').textContent=`📊 ${r.name} 강도 조절`;
+    document.getElementById('adjust-sub').textContent=adj===0?'최대 90%까지 줄일 수 있어요 · 2회 제한':'한 번 더 조절 가능해요 · 이후 잠김';
+
+    const grades=['min','base','bonus'].filter(g=>r.steps[g]);
+    document.getElementById('adjust-sliders').innerHTML=grades.map(g=>{
+        const label=r.steps[g].label;
+        const m=label.match(/^(\d+\.?\d*)(.*)/);
+        const origNum=parseFloat(m?.[1]||0);
+        const unit=m?.[2]||'';
+        const minVal=Math.ceil(origNum*0.9*10)/10;
+        adjustValues[g]=origNum;
+        const gradeName={min:'🔴 최소',base:'🟡 기본',bonus:'🟢 보너스'}[g];
+        return `<div class="adjust-row">
+            <div class="adjust-label">
+                <span>${gradeName}</span>
+                <span class="adjust-val" id="adj-val-${g}">${origNum}${unit}</span>
+            </div>
+            <input type="range" class="adjust-slider"
+                id="adj-slider-${g}"
+                min="${minVal}" max="${origNum}" step="0.1"
+                value="${origNum}"
+                oninput="onAdjustSlide('${g}','${unit}',${origNum})">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--w30);margin-top:4px;">
+                <span>${minVal}${unit} (90%)</span><span>${origNum}${unit} (현재)</span>
+            </div>
+        </div>`;
+    }).join('');
+    document.getElementById('adjust-modal').classList.add('open');
+}
+
+function onAdjustSlide(grade, unit, origNum){
+    const val=parseFloat(document.getElementById(`adj-slider-${grade}`).value);
+    adjustValues[grade]=val;
+    document.getElementById(`adj-val-${grade}`).textContent=Math.round(val*10)/10+unit;
+}
+
+function closeAdjustModal(){document.getElementById('adjust-modal').classList.remove('open');adjustTargetId=null;}
+
+async function confirmAdjust(){
+    if(!adjustTargetId) return;
+    const block=await getBlock();
+    const idx=block.findIndex(x=>x.id===adjustTargetId);
+    if(idx===-1) return;
+    const r=block[idx];
+    let changed=false;
+    ['min','base','bonus'].forEach(g=>{
+        if(!r.steps[g]) return;
+        const m=r.steps[g].label.match(/^(\d+\.?\d*)(.*)/);
+        const origNum=parseFloat(m?.[1]||0);
+        const unit=m?.[2]||'';
+        const newVal=adjustValues[g];
+        if(newVal!==undefined&&Math.round(newVal*10)/10!==origNum){
+            block[idx].steps[g]={label:Math.round(newVal*10)/10+unit};
+            changed=true;
+        }
+    });
+    if(changed){
+        block[idx].adjustCount=(r.adjustCount||0)+1;
+        await setBlock(block);
+        showToast(`✦ ${r.name} 강도 조절됨 (${block[idx].adjustCount}/2회)`);
+    } else {
+        showToast('변경사항이 없어요.');
+    }
+    closeAdjustModal();
     render();
 }
 
