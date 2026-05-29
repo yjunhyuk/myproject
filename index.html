@@ -556,24 +556,18 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
     <div id="note-pin-banner" style="
         background:linear-gradient(135deg,#1a0533,#0d0d1a);
         border-bottom:1px solid rgba(180,80,255,.2);
-        padding:8px 16px;
-        display:flex;align-items:center;justify-content:space-between;gap:12px;
+        padding:8px 20px;
+        display:flex;align-items:center;justify-content:center;gap:12px;
         flex-shrink:0;
     ">
-        <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.4);text-transform:uppercase;">PIN</span>
-            <span id="note-pin-num" style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.3em;color:#fff;text-shadow:0 0 20px rgba(180,80,255,.8);">----</span>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-            <button onclick="captureExcalidraw()" style="
-                padding:7px 16px;border-radius:100px;border:none;
-                background:#fff;color:#0a0a0a;
-                font-size:12px;font-weight:800;cursor:pointer;
-                font-family:'Plus Jakarta Sans',sans-serif;
-                box-shadow:0 2px 8px rgba(0,0,0,.3);
-                transition:all .15s;
-            ">📸 저장</button>
-        </div>
+        <span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.4);text-transform:uppercase;">오늘의 PIN</span>
+        <span id="note-pin-num" style="
+            font-family:'Bebas Neue',sans-serif;
+            font-size:28px;letter-spacing:.3em;
+            color:#fff;
+            text-shadow:0 0 20px rgba(180,80,255,.8);
+        ">----</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.3);">← Excalidraw에 이 PIN을 적어주세요</span>
     </div>
     <iframe
         src="https://excalidraw.com"
@@ -581,17 +575,6 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
         allow="clipboard-read; clipboard-write"
         title="Excalidraw 노트">
     </iframe>
-</div>
-
-<!-- 과목 선택 모달 (스크린샷 저장용) -->
-<div id="screenshot-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(16px);z-index:700;align-items:flex-end;justify-content:center;">
-    <div style="background:var(--surface2);border:1px solid rgba(255,255,255,.08);border-bottom:none;border-radius:28px 28px 0 0;padding:22px 20px 44px;width:100%;max-width:480px;animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);">
-        <div class="sheet-handle"></div>
-        <div class="sheet-title">과목 선택</div>
-        <div class="sheet-sub">이 스크린샷을 어느 과목 폴더에 저장할까요?</div>
-        <div id="screenshot-subject-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;"></div>
-        <button class="btn-cancel" onclick="closeScreenshotModal()" style="width:100%;margin-top:14px;">취소</button>
-    </div>
 </div>
 
 <!-- 루틴 탭 -->
@@ -2702,75 +2685,6 @@ async function devResetAll(){
     _cache={};
     showToast('전체 초기화됨');
     location.reload();
-}
-
-/* ══════════════════════════════════════════════════════════════
-   스크린샷 캡처 (Screen Capture API)
-══════════════════════════════════════════════════════════════ */
-let capturedScreenshot = null;
-
-async function captureExcalidraw(){
-    try {
-        showToast('📸 캡처할 화면을 선택해주세요...', 5000);
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { cursor: 'never' },
-            audio: false
-        });
-        const track = stream.getVideoTracks()[0];
-        const imageCapture = new ImageCapture(track);
-        const bitmap = await imageCapture.grabFrame();
-        track.stop();
-
-        // bitmap → canvas → dataURL
-        const canvas = document.createElement('canvas');
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        canvas.getContext('2d').drawImage(bitmap, 0, 0);
-        capturedScreenshot = canvas.toDataURL('image/png');
-
-        showToast('✅ 캡처 완료! 과목을 선택해주세요.');
-        openScreenshotModal();
-    } catch(err) {
-        if(err.name !== 'NotAllowedError'){
-            showToast('❌ 캡처 실패: ' + err.message);
-        }
-    }
-}
-
-function openScreenshotModal(){
-    const subjects = ['수학','영어','국어','사회','과학','한국사','코딩','AI공부','독서','러닝','기타'];
-    document.getElementById('screenshot-subject-grid').innerHTML = subjects.map(s =>
-        `<button onclick="saveScreenshot('${s}')" style="
-            padding:14px;border-radius:14px;border:1px solid var(--border);
-            background:var(--surface3);color:#fff;cursor:pointer;
-            font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;
-            transition:all .2s;
-        " onmouseover="this.style.borderColor='rgba(180,80,255,.4)'"
-           onmouseout="this.style.borderColor='var(--border)'">${s}</button>`
-    ).join('');
-    document.getElementById('screenshot-modal').style.display = 'flex';
-}
-
-function closeScreenshotModal(){
-    document.getElementById('screenshot-modal').style.display = 'none';
-    capturedScreenshot = null;
-}
-
-async function saveScreenshot(subject){
-    if(!capturedScreenshot) return;
-    closeScreenshotModal();
-    showToast(`⏳ "${subject}" 폴더에 저장 중...`, 3000);
-    try {
-        // Supabase notes 테이블에 저장
-        const savedAt = Date.now();
-        const existing = await dbGetBySubject(subject);
-        const probIdx = existing.length; // 다음 문제 번호
-        await dbPutNote(subject, probIdx, capturedScreenshot);
-        capturedScreenshot = null;
-        showToast(`✅ "${subject}" ${probIdx + 1}번째 페이지 저장됨!`, 2500);
-    } catch(err) {
-        showToast('❌ 저장 실패: ' + err.message);
-    }
 }
 
 window.addEventListener('load',async()=>{
