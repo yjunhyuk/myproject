@@ -551,30 +551,42 @@ canvas#noteCanvas.texture-kraft{background-color:#d9b97e !important;}
 <div id="toast"></div>
 
 <!-- 노트 탭 -->
-<div id="tab-note" class="tab-content active" style="flex-direction:column;">
-    <!-- PIN 배너 -->
-    <div id="note-pin-banner" style="
-        background:linear-gradient(135deg,#1a0533,#0d0d1a);
-        border-bottom:1px solid rgba(180,80,255,.2);
-        padding:8px 20px;
-        display:flex;align-items:center;justify-content:center;gap:12px;
-        flex-shrink:0;
-    ">
-        <span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.4);text-transform:uppercase;">오늘의 PIN</span>
-        <span id="note-pin-num" style="
-            font-family:'Bebas Neue',sans-serif;
-            font-size:28px;letter-spacing:.3em;
-            color:#fff;
-            text-shadow:0 0 20px rgba(180,80,255,.8);
-        ">----</span>
-        <span style="font-size:10px;color:rgba(255,255,255,.3);">← Excalidraw에 이 PIN을 적어주세요</span>
+<div id="tab-note" class="tab-content active">
+    <div id="note-home">
+        <div class="note-home-header">
+            <div class="note-home-title">내 노트 <span>📚</span></div>
+            <div style="font-size:11px;color:var(--w30);" id="total-note-count">과목 0개</div>
+        </div>
+        <div class="note-subject-grid" id="subject-grid"></div>
     </div>
-    <iframe
-        src="https://excalidraw.com"
-        style="width:100%;flex:1;border:none;display:block;"
-        allow="clipboard-read; clipboard-write"
-        title="Excalidraw 노트">
-    </iframe>
+    <div id="note-canvas-view">
+        <div id="note-main">
+            <div id="note-inner">
+                <div id="canvas-wrapper">
+                    <canvas id="noteCanvas" width="842" height="1100"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- 문제 네비게이션 바 -->
+        <div id="prob-nav">
+            <button class="prob-nav-btn" onclick="prevProblem()">◂</button>
+            <div style="flex:1;display:flex;justify-content:center;align-items:center;">
+                <input id="prob-num-input" type="text" inputmode="numeric"
+                    value="1"
+                    onblur="jumpToProblem(this.value)"
+                    onkeydown="if(event.key==='Enter'){this.blur();}"
+                    style="width:64px;text-align:center;font-family:'Syne',sans-serif;font-weight:800;font-size:22px;
+                    background:none;border:none;border-bottom:2px solid rgba(255,255,255,0.15);
+                    color:var(--white);outline:none;padding:2px 4px;cursor:pointer;transition:border-color .2s;"
+                    onfocus="this.select();this.style.borderColor='var(--pl)'"
+                    onblur2="this.style.borderColor='rgba(255,255,255,0.15)'">
+                <span style="font-family:'Syne',sans-serif;font-size:14px;color:var(--w30);margin-left:6px;">/ <span id="prob-total">1</span></span>
+            </div>
+            <button class="prob-nav-btn next" onclick="nextProblem()">▸</button>
+            <button onclick="deleteCurrentProblem()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(244,63,94,0.3);background:rgba(244,63,94,0.08);color:#f43f5e;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap;" onmouseover="this.style.background='rgba(244,63,94,0.18)'" onmouseout="this.style.background='rgba(244,63,94,0.08)'">🗑 삭제</button>
+            <button onclick="saveImageToDevice()" style="padding:7px 12px;border-radius:8px;border:1px solid rgba(34,211,160,0.3);background:rgba(34,211,160,0.08);color:#22d3a0;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap;" onmouseover="this.style.background='rgba(34,211,160,0.18)'" onmouseout="this.style.background='rgba(34,211,160,0.08)'">💾 저장</button>
+        </div>
+    </div>
 </div>
 
 <!-- 루틴 탭 -->
@@ -1080,15 +1092,16 @@ function switchTab(tab){
     document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
     document.getElementById('tab-'+tab).classList.add('active');
     document.querySelector('.tab-btn[onclick="switchTab(\''+tab+'\')"]').classList.add('active');
-    document.body.classList.remove('note-active');
-    document.getElementById('toolbar').classList.add('hidden');
-    document.getElementById('note-add-fab').classList.add('hidden');
+    if(tab==='note'){
+        document.body.classList.add('note-active');
+        showNoteHome();
+    } else {
+        document.body.classList.remove('note-active');
+        document.getElementById('toolbar').classList.add('hidden');
+        document.getElementById('note-add-fab').classList.add('hidden');
+    }
     if(tab==='routine'){checkSettle().then(()=>render());}
     if(tab==='shop'){renderShop();}
-    if(tab==='note'){
-        const pinEl=document.getElementById('note-pin-num');
-        if(pinEl) pinEl.textContent=getTodayPIN();
-    }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1879,47 +1892,26 @@ function getTodayPIN(){
 function showPinInfo(){alert('오늘의 PIN: '+getTodayPIN()+'\n\nPIN은 자정마다 자동으로 바뀌어요.\n파일 첨부 인증 시 사진에 이 PIN이 보여야 합니다.');}
 
 /* ── 프롬프트 ── */
-const BASE_PROMPT_NOTE=`당신은 수능 준비생의 학습 노트 인증 심사관입니다.
+const BASE_PROMPT_NOTE=`당신은 수능 준비생의 학습 인증 심사관입니다.
+학생이 오늘 특정 과목을 공부한 노트 이미지를 전달합니다.
 
-[통과 기준 - 하나라도 해당하면 통과]
-- 숫자, 수식, 한자, 영단어 등 학습 관련 내용이 보인다
-- 문제 번호나 답안 흔적이 있다
-- 교과서/문제집 내용을 옮겨 적은 흔적이 있다
-- 도표, 그래프, 개념 정리 등이 있다
-
-[실패 기준 - 명백할 때만 실패]
-- 완전히 빈 페이지
-- 학습과 무관한 그림만 있음 (사람 그림, 낙서 등)
-- 의미없는 기호나 선만 반복됨
-- 풀이가 전부 엉터리로 도배된 것이 명백함
-
-[주의사항]
-- 풀이가 맞는지 틀린지는 절대 판단하지 마세요
-- 애매하면 통과시키세요
-- 한 줄이라도 학습 흔적이 있으면 통과입니다
+[판단 기준]
+1. 이미지에 실제 문제 풀이, 공식, 필기가 있는지 확인하세요.
+2. 정답/오답은 판단하지 않습니다. 성실하게 풀었는지만 봅니다.
+3. 빈 페이지이거나 낙서 수준이면 실패입니다.
+4. 풀이량이 목표치에 근접하면 통과입니다.
 
 JSON만 출력: {"verified": true/false, "reason": "한 줄 이유"}`;
 
-const BASE_PROMPT_PHOTO=`당신은 수능 준비생의 활동 인증 심사관입니다.
-학생이 오늘 활동했다는 사진 증거를 전달합니다.
-사진 안에 오늘의 PIN 4자리가 반드시 보여야 합니다. PIN이 없거나 틀리면 무조건 실패입니다.
+const BASE_PROMPT_PHOTO=`당신은 수능 준비생의 자기관리 앱 인증 심사관입니다.
+사용자는 루틴 수행 후 PIN이 포함된 사진을 업로드합니다.
 
-[통과 기준 - PIN 확인 후 하나라도 해당하면 통과]
-- 직접 활동 중인 사진 (운동 자세, 독서 중, 작업 중 등)
-- 간접 증거 (삼성헬스, 애플워치, 런닝앱 기록 스크린샷)
-- 활동 후 정황 증거 (땀, 운동화, 트랙, 기구 등)
-- 활동 결과물 사진 (완성된 작업물, 정리된 노트 등)
-
-[실패 기준 - 명백할 때만 실패]
-- PIN이 없거나 틀림
-- 활동과 전혀 무관한 사진
-- 침대에 누워있거나 쉬는 사진이 명백함
-- 인터넷에서 가져온 사진임이 명백함
-
-[주의사항]
-- 완벽한 자세나 기록을 요구하지 마세요
-- 간접 증거도 충분한 증거입니다
-- 애매하면 통과시키세요
+[중요 규칙]
+1. 사진 안에 오늘의 PIN 4자리가 반드시 보여야 합니다. PIN이 없거나 틀리면 무조건 실패입니다.
+2. PIN이 확인되면, 사진이 목표를 달성한 직접적인 증거를 담고 있는지 판단하세요.
+3. 직접 증거란: 타이머/앱 기록, 교재/노트, 운동 장면, 스크린샷 등 목표와 명확히 연관된 증거입니다.
+4. 증거가 애매하거나 목표와 무관하면 실패입니다.
+5. 인터넷에서 가져온 사진처럼 보이면 실패입니다.
 
 JSON만 출력: {"verified": true/false, "reason": "한 줄 이유"}`;
 
@@ -1970,10 +1962,53 @@ function closeVerifyMethodModal(){document.getElementById('verify-method-modal')
 async function verifyByNote(){
     closeVerifyMethodModal();
     if(!pendingVerify) return;
-    // 파일 선택 input에 노트 인증 모드 표시
-    const inp=document.getElementById('verify-file-input');
-    inp.dataset.mode='note';
-    inp.click();
+    const {routineId,grade,routineName,step}=pendingVerify;
+
+    const matched=SUBJECTS.find(s=>routineName.includes(s.name));
+    const subjectName=matched?matched.name:routineName;
+
+    const allPages=await dbGetBySubject(subjectName);
+    if(allPages.length===0){
+        showCertModal(false,'인증 실패',`📝 "${subjectName}" 노트가 없어요.\n노트탭에서 먼저 풀이를 작성해주세요!`);
+        return;
+    }
+
+    const apiKey=await sbGet('axis_api_key','')||LS.g('axis_api_key','');
+    if(!apiKey){showToast('API Key를 입력해주세요!');return;}
+
+    setVerifyBtnLoading(routineId,grade,true);
+
+    try{
+        // 문제=페이지 1:1, probIdx 기준 정렬 후 최대 10개
+        allPages.sort((a,b)=>(a.probIdx??0)-(b.probIdx??0));
+        const sampled=allPages.slice(0,10);
+        const probCount=allPages.length;
+        const baseNote=LS.g('axis_base_prompt_note',BASE_PROMPT_NOTE);
+        const custom=getCustomPrompts()[routineName]||'';
+        const promptText=baseNote
+            +`\n\n[과목] ${subjectName}`
+            +`\n[목표] ${step.label}`
+            +(custom?`\n\n[추가 기준]\n${custom}`:'')
+            +`\n\n각 이미지는 하나의 문제 풀이입니다. 이미지 순서대로 문제1, 문제2...로 판단하세요.`;
+
+        const content=[{type:'text',text:promptText}];
+        sampled.forEach(p=>{
+            if(p.dataURL) content.push({type:'image_url',image_url:{url:p.dataURL}});
+        });
+
+        const resp=await fetch('https://api.openai.com/v1/chat/completions',
+            {method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+             body:JSON.stringify({model:LS.g('axis_model','gpt-5-mini-2025-08-07'),messages:[{role:'user',content}],max_completion_tokens:2000,temperature:0.1})}
+        );
+        const data=await resp.json();
+        const txt=data.choices?.[0]?.message?.content||'{}';
+        const res=JSON.parse(txt.replace(/```json|```/g,'').trim());
+        if(data.usage) showToast(`📊 입력 ${data.usage.prompt_tokens} / 출력 ${data.usage.completion_tokens} 토큰`,3000);
+        handleVerifyResult(res,routineId,grade);
+    }catch(err){
+        setVerifyBtnLoading(routineId,grade,false);
+        showCertModal(false,'오류 발생','API 오류: '+err.message);
+    }
 }
 
 function verifyByPhoto(){
@@ -1993,15 +2028,9 @@ async function handlePhotoVerify(e){
     try{
         const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(file);});
         const pin=getTodayPIN();
-        const isNoteMode=e.target.dataset.mode==='note';
-        const basePrompt=isNoteMode
-            ?LS.g('axis_base_prompt_note',BASE_PROMPT_NOTE)
-            :LS.g('axis_base_prompt_photo',BASE_PROMPT_PHOTO);
+        const basePhoto=LS.g('axis_base_prompt_photo',BASE_PROMPT_PHOTO);
         const custom=getCustomPrompts()[routineName]||'';
-        const promptText=isNoteMode
-            ?basePrompt+`\n\n[과목] ${routineName}\n[오늘 목표] ${step.label}\n[오늘의 PIN] ${pin} (이미지 안에 PIN이 있어야 오늘 작성한 것으로 인정합니다)${custom?'\n\n[추가 기준]\n'+custom:''}`
-            :basePrompt+`\n\n[오늘의 PIN] ${pin}\n[루틴명] ${routineName}\n[오늘 목표] ${step.label}${custom?'\n\n[추가 기준]\n'+custom:''}\n\n위 사진을 판단하세요.`;
-        e.target.dataset.mode='';
+        const promptText=basePhoto+`\n\n[오늘의 PIN] ${pin}\n[루틴명] ${routineName}\n[오늘 목표] ${step.label}${custom?'\n\n[추가 기준]\n'+custom:''}\n\n위 사진을 판단하세요.`;
         const content=[
             {type:'text',text:promptText},
             {type:'image_url',image_url:{url:`data:${file.type};base64,${b64}`}}
